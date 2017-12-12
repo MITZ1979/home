@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>验证码</title>
+<!-- 2017-10-13 Fri 10:40 -->
+<meta  charset="utf-8">
+<meta  name="generator" content="Org-mode">
+<meta  name="author" content="imfine">
+<meta  name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/base.css">
+<script src="assets/base.js"></script>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href="index.html"> UP </a>
+ |
+ <a accesskey="H" href="index.html"> HOME </a>
+</div><div id="content">
+<h1 class="title">验证码</h1>
+<nav id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1. 前言</a></li>
+<li><a href="#sec-2">2. 验证码的原理</a></li>
+<li><a href="#sec-3">3. 图片验证码</a></li>
+<li><a href="#sec-4">4. 短信验证码</a></li>
+<li><a href="#sec-5">5. 邮箱验证码</a></li>
+</ul>
+</div>
+</nav>
+
+
+<section id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> 前言</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+定义：
+</p>
+<blockquote>
+<p>
+<b>全自动区分计算机和人类的公开图灵测试</b> 
+</p>
+
+<p>
+英语: Completely Automated Public Turing test to tell Computers and Humans Apart
+</p>
+
+<p>
+俗称 <b>验证码</b>, 缩写为 <b>Captcha</b>.
+</p>
+</blockquote>
+
+<p>
+首先，需要明白：
+</p>
+<pre class="example">
+验证码是种反人类的存在。但它短时间内不可能退出历史舞台。我们需要尽量优化它，尽量提升用户的体验。
+</pre>
+
+<p>
+为什么要有验证码呢？
+</p>
+<pre class="example">
+是为了证明网络的那端是一个人而不是一台机器(电脑)。
+</pre>
+
+<p>
+为什么要区分是人还是机器呢？
+</p>
+<pre class="example">
+原因很多，归根结底，在于做坏事上，机器的效率比人高、成本比人低！
+</pre>
+
+<p>
+<span class="underline">示例，臭名昭著的百度，极其恶心的验证码：</span>
+</p>
+
+
+<figure>
+<p><img src="assets/image/howdoudo-captcha/2017-7-10_2017-07-10_23-33-04.png" alt="2017-7-10_2017-07-10_23-33-04.png">
+</p>
+</figure>
+
+
+<p>
+下面是验证码的几种常用场景：
+</p>
+<ol class="org-ol">
+<li>账号安全。比如登录窗口，如果不设置验证码，可以使用脚本进行暴力破解。
+</li>
+<li>防作弊。比如，12306 的验证码是为了防止机器恶意刷票。
+</li>
+<li>反垃圾消息。比如，某些论坛上的验证码，防止机器群发的垃圾广告广告。
+</li>
+</ol>
+
+
+<figure>
+<p><img src="assets/image/howdoudo-captcha/2017-07-10_22-27-351.jpg" alt="2017-07-10_22-27-351.jpg">
+</p>
+</figure>
+
+<p>
+下面是几种常见可视化验证码的形式：
+</p>
+<ol class="org-ol">
+<li>歪曲的字
+</li>
+<li>倒立，点击
+</li>
+<li>问答题
+</li>
+<li>滑动拼图验证码
+</li>
+<li>其他各种五花八门
+</li>
+</ol>
+
+
+<figure>
+<p><img src="assets/image/howdoudo-captcha/2017-07-10_22-28-241.jpg" alt="2017-07-10_22-28-241.jpg">
+</p>
+</figure>
+
+
+
+<p>
+他们有一个共同点，机器不容易辨认，可人类很容易就能识别。
+</p>
+
+
+<p>
+<i>现在，验证码技术也在不断发展。尤其是基于大数据的智能判断方兴未艾，按下不表。</i>
+</p>
+</div>
+</section>
+
+<section id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> 验证码的原理</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+一个完整的验证逻辑分两步：
+</p>
+
+<ol class="org-ol">
+<li>第一次请求 （获取阶段）
+<ul class="org-ul">
+<li>服务器生成一个可以比较的对象，比如字符串或数字，并将其保存起来。一般保存到 Session 中。
+</li>
+<li>服务器根据上述生成的对象，构造出机器难以辨识的一段数据，比如声音、图片或短信，并发送给用户。
+</li>
+<li>数据在客户端展示，用户可以去识别。
+</li>
+</ul>
+</li>
+
+<li>第二次请求, 携带用户输入的验证信息 （校验阶段）
+<ul class="org-ul">
+<li>用户将自己的数据，连带辨识出来的验证码数据，一并请求到服务器
+</li>
+<li>服务器将之前保存的原始数据，跟用户提交的作比较。如果相同，那么通过，否则不通过。
+</li>
+</ul>
+</li>
+</ol>
+</div>
+</section>
+
+<section id="outline-container-sec-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> 图片验证码</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+这是一种 <b>最基本的验证方式</b>, 其他所有的验证思路都是跟它一致的。
+</p>
+
+<p>
+Java 中，绘制图片，需要用到 <code>awt</code> 包的 <code>BufferedImage</code> 类。
+</p>
+
+<p>
+在获取阶段，客户端代码描述为：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-html">&lt;<span class="org-function-name">img</span> <span class="org-variable-name">src</span>=<span class="org-string">"/captcha"</span> <span class="org-variable-name">title</span>=<span class="org-string">"&#39564;&#35777;&#30721;"</span> /&gt;
+&lt;<span class="org-function-name">input</span> <span class="org-variable-name">name</span>=<span class="org-string">"captcha"</span> /&gt;
+</pre>
+</div>
+
+<p>
+服务端的代码描述为：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@WebServlet</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"/captcha"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+<span class="org-keyword">class</span> <span class="org-type">CaptchaServlet</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-keyword">public</span> <span class="org-function-name">&#33719;&#24471;&#39564;&#35777;&#30721;&#30340;&#26041;&#27861;</span> <span class="org-rainbow-delimiters-depth-2">()</span> <span class="org-rainbow-delimiters-depth-2">{</span>
+        <span class="org-comment-delimiter">// </span><span class="org-comment">1. &#33719;&#21462;&#38543;&#26426;&#23383;&#31526;&#20018;&#65292;&#20316;&#20026;&#21407;&#22987;&#39564;&#35777;&#23383;&#31526;&#20018;</span>
+        <span class="org-type">String</span> <span class="org-variable-name">randomString</span> = getRandomString<span class="org-rainbow-delimiters-depth-3">(</span>4<span class="org-rainbow-delimiters-depth-3">)</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">2. &#26681;&#25454;&#23383;&#31526;&#20018;&#65292;&#29983;&#25104;&#26426;&#22120;&#38590;&#20197;&#36776;&#35748;&#30340;&#22270;&#29255;</span>
+        <span class="org-type">BufferedImage</span> <span class="org-variable-name">image</span> = &#32472;&#21046;&#22270;&#29255;<span class="org-rainbow-delimiters-depth-3">(</span>randomString<span class="org-rainbow-delimiters-depth-3">)</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">3. &#21407;&#22987;&#23383;&#31526;&#20018; -&gt; &#20445;&#23384;&#36215;&#26469;</span>
+        session.setAttribute<span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"captcha"</span>, randomString<span class="org-rainbow-delimiters-depth-3">)</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">4. &#32472;&#21046;&#30340;&#22270;&#29255; -&gt; &#21457;&#36865;&#32473;&#29992;&#25143;</span>
+        ImageIO.write<span class="org-rainbow-delimiters-depth-3">(</span>image, <span class="org-string">"PNG"</span>, response.getOutputStream<span class="org-rainbow-delimiters-depth-4">()</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+    <span class="org-rainbow-delimiters-depth-2">}</span>
+
+
+    <span class="org-comment-delimiter">/* </span><span class="org-comment">&#26681;&#25454;&#23383;&#31526;&#20018;&#32472;&#21046;&#22270;&#29255; */</span>
+    <span class="org-type">BufferedImage</span> <span class="org-function-name">&#32472;&#21046;&#22270;&#29255;</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">String</span> <span class="org-variable-name">randomString</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-2">{</span>
+        <span class="org-comment-delimiter">// </span><span class="org-comment">1. &#21019;&#24314; Image &#23545;&#35937;</span>
+        <span class="org-type">BufferedImage</span> <span class="org-variable-name">image</span> = <span class="org-keyword">new</span> <span class="org-type">BufferedImage</span><span class="org-rainbow-delimiters-depth-3">(</span>w, h, <span class="org-constant">BufferedImage</span>.TYPE_INT_RGB<span class="org-rainbow-delimiters-depth-3">)</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">2. &#33719;&#21462;&#30011;&#31508;</span>
+        <span class="org-type">Graphics</span> <span class="org-variable-name">g</span> = image.getGraphics<span class="org-rainbow-delimiters-depth-3">()</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">3. &#35774;&#32622;&#32972;&#26223;&#33394;</span>
+        g.setColor<span class="org-rainbow-delimiters-depth-3">(</span>getRandomColor<span class="org-rainbow-delimiters-depth-4">()</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+        g.fillRect<span class="org-rainbow-delimiters-depth-3">(</span>0, 0, w, h<span class="org-rainbow-delimiters-depth-3">)</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">4. &#32472;&#21046;&#23383;&#31526;&#20018;</span>
+        g.setColor<span class="org-rainbow-delimiters-depth-3">(</span>getRandomColor<span class="org-rainbow-delimiters-depth-4">()</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+        g.setFont<span class="org-rainbow-delimiters-depth-3">(</span><span class="org-keyword">new</span> <span class="org-type">Font</span><span class="org-rainbow-delimiters-depth-4">(</span>xxx, xxx, xxx<span class="org-rainbow-delimiters-depth-4">)</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+        g.drawString<span class="org-rainbow-delimiters-depth-3">()</span>;
+        <span class="org-comment-delimiter">// </span><span class="org-comment">&#20854;&#20182;&#19968;&#20123;&#22788;&#29702;&#65292;&#21464;&#24418;&#25197;&#26354;&#31561;</span>
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">5. &#30011;&#24178;&#25200;&#32447;&#21644;&#24178;&#25200;&#28857;&#31561;</span>
+        g.setColor<span class="org-rainbow-delimiters-depth-3">(</span>getRandomColor<span class="org-rainbow-delimiters-depth-4">()</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+        g.drawLine<span class="org-rainbow-delimiters-depth-3">()</span>;
+        g.drawOval<span class="org-rainbow-delimiters-depth-3">()</span>;
+
+        <span class="org-comment-delimiter">// </span><span class="org-comment">6. &#32467;&#26463;</span>
+        g.dispose<span class="org-rainbow-delimiters-depth-3">()</span>;
+
+        <span class="org-keyword">return</span> image;
+    <span class="org-rainbow-delimiters-depth-2">}</span>
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+</div>
+</section>
+
+
+<section id="outline-container-sec-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> 短信验证码</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+除了上述直接发送给用户浏览器的可视化验证码之外，在注册等场合，我们经常用到短信或邮箱验证。
+</p>
+
+<p>
+这主要是为了防止账号被随意注册，从而进行恶意行为（僵尸粉，刷单等），也是奸商获取我们私人信息的重要途径（其实是为了提供更优服务哦~）。
+</p>
+
+<p>
+有时候也是为了代替密码，绑定手机用来确保登录的安全性。
+</p>
+
+<blockquote>
+<p>
+小朋友，将你的所有秘密都告诉我，我会给你糖吃~     by 麻云
+</p>
+</blockquote>
+
+<p>
+不管是图片验证码，还是短信、邮箱验证，道理都是一样的，区别在于发送给用户去辨认的数据不同、数据展示方式不同或数据接收媒介不同。
+</p>
+
+
+<figure>
+<p><img src="assets/image/howdoudo-captcha/zhihu_2017-07-10_23-42-24.png" alt="zhihu_2017-07-10_23-42-24.png">
+</p>
+</figure>
+
+
+<p>
+<code>短信验证</code> 也是分为 <b>验证码获取</b> 和 <b>校验</b> 两个阶段！ <b>获取验证码</b> 这一步通常通过 Ajax 实现，并在服务端调用短信接口发送数据，数据不再通过浏览器展现，而是通过手机等其他媒介传递。
+</p>
+
+<p>
+<b>短信验证的简单代码描述为：</b>
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">1. &#20174; request &#20013;&#24471;&#21040;&#29992;&#25143;&#30340;&#25163;&#26426;&#21495;&#30721;</span>
+<span class="org-type">String</span> <span class="org-variable-name">phone</span> = request.getParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"phone"</span><span class="org-rainbow-delimiters-depth-1">)</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">2. &#24471;&#21040;&#38543;&#26426;&#30340;&#23383;&#31526;&#20018;&#25110;&#25968;&#23383;</span>
+<span class="org-type">String</span> <span class="org-variable-name">randomNumber</span> = getRandomNumber<span class="org-rainbow-delimiters-depth-1">(</span>4<span class="org-rainbow-delimiters-depth-1">)</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">3. &#23558;&#24471;&#21040;&#30340;&#21407;&#22987;&#23383;&#31526;&#20018;&#20445;&#23384;&#36215;&#26469;</span>
+session.setAttribute<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"captcha"</span>, randomNumber<span class="org-rainbow-delimiters-depth-1">)</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">4. &#35843;&#29992;&#30701;&#20449;&#25509;&#21475;&#26381;&#21153;&#65292;&#23558;&#21407;&#22987;&#23383;&#31526;&#20018;&#21457;&#36865;&#32473;&#29992;&#25143;</span>
+SMSInteface.sendMessage<span class="org-rainbow-delimiters-depth-1">(</span>phone, randomNumber<span class="org-rainbow-delimiters-depth-1">)</span>;
+</pre>
+</div>
+
+<p>
+至于短信接口服务，有很多。比如<a href="https://www.alidayu.com">阿里大鱼</a>, 它的使用很简单：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">1. &#27880;&#20876;&#36134;&#21495;&#65292;&#33719;&#21462; appkey &#21644; secret</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">2. &#30003;&#35831;&#30701;&#20449;&#31614;&#21517;&#65292;&#30003;&#35831;&#30701;&#20449;&#27169;&#26495;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">3. &#20026;&#39033;&#30446;&#28155;&#21152; jar &#21253;: "com.aliyun:aliyun-java-sdk-dysmsapi:+"</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">4. &#32534;&#20889;&#31243;&#24207;&#65292;&#21457;&#36865;&#30701;&#20449;</span>
+<span class="org-keyword">public</span> <span class="org-type">void</span> <span class="org-function-name">sendMessage</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">String</span> <span class="org-variable-name">phone</span>, <span class="org-type">String</span> <span class="org-variable-name">randomNumber</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">1. &#26500;&#36896; request &#23545;&#35937;</span>
+    <span class="org-type">AlibabaAliqinFcSmsNumSendRequest</span> <span class="org-variable-name">req</span> = <span class="org-keyword">new</span> <span class="org-type">AlibabaAliqinFcSmsNumSendRequest</span><span class="org-rainbow-delimiters-depth-2">()</span>;
+    req.setRecNum<span class="org-rainbow-delimiters-depth-2">(</span>phone<span class="org-rainbow-delimiters-depth-2">)</span>;        <span class="org-comment-delimiter">// </span><span class="org-comment">&#21457;&#32473;&#35841;</span>
+    req.setSmsType<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"normal"</span><span class="org-rainbow-delimiters-depth-2">)</span>;    <span class="org-comment-delimiter">// </span><span class="org-comment">&#30701;&#24687;&#31867;&#22411; </span>
+    req.setSmsFreeSignName<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"&#21335;&#26041;IT&#23398;&#38498;134&#29677;"</span><span class="org-rainbow-delimiters-depth-2">)</span>;  <span class="org-comment-delimiter">// </span><span class="org-comment">&#20320;&#30340;&#31614;&#21517;</span>
+    req.setSmsTemplateCode<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"SMS_585014"</span><span class="org-rainbow-delimiters-depth-2">)</span>;                          <span class="org-comment-delimiter">// </span><span class="org-comment">&#27169;&#26495;&#65292;&#38656;&#35201;&#33258;&#24049;&#22312;&#21518;&#21488;&#35774;&#32622;</span>
+    req.setSmsParamString<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"{,\"body\":\""</span> + randomNumber + <span class="org-string">"\"}"</span><span class="org-rainbow-delimiters-depth-2">)</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">&#21457;&#36865;&#20869;&#23481;&#65292;&#20197;&#21442;&#25968;&#24418;&#24335;&#20256;&#36882;&#32473;&#27169;&#26495;</span>
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">2. &#21457;&#36865;&#30701;&#20449;&#65292;&#29983;&#25104; response &#23545;&#35937;</span>
+    <span class="org-type">TaobaoClient</span> <span class="org-variable-name">client</span> = <span class="org-keyword">new</span> <span class="org-type">DefaultTaobaoClient</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"http://gw.api.taobao.com/router/rest"</span>, appkey, secret<span class="org-rainbow-delimiters-depth-2">)</span>;
+    <span class="org-type">AlibabaAliqinFcSmsNumSendResponse</span> <span class="org-variable-name">resp</span> = client.execute<span class="org-rainbow-delimiters-depth-2">(</span>req<span class="org-rainbow-delimiters-depth-2">)</span>;
+    System.out.println<span class="org-rainbow-delimiters-depth-2">(</span>resp.getBody<span class="org-rainbow-delimiters-depth-3">()</span><span class="org-rainbow-delimiters-depth-2">)</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+就这么简单。
+</p>
+</div>
+</section>
+
+<section id="outline-container-sec-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> 邮箱验证码</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+邮箱验证，需要用到 J2EE 的 Java Mail 标准。
+</p>
+
+<p>
+国外的网站，基本都是使用邮箱注册。它很基础很重要。
+</p>
+
+<p>
+但道理相通，时间有限，在此略过不提。
+</p>
+</div>
+</section>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: imfine</p>
+<p class="date">Created: 2017-10-13 Fri 10:40</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.2.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation">Go ahead, never stop.</p>
+</div>
+</body>
+</html>

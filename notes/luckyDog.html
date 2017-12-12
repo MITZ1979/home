@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>134班座次</title>
+    <style>
+     * { margin: 0; padding: 0; box-sizing: border-box; }
+     body { background-color:#EAEAEA; }
+     .g1 { background: #A3D1D1;}
+     .g2 { background: #BCEE68; }
+     .g3 { background: #97CBFF; }
+     .g4 { background: pink; }
+     .g5 { background: #B9B9FF; }
+     .g6 { background: #BDB76B; }
+     .g7 { background: #fff2b2; }
+     .g8 { background: #B3EE3A; }
+     .g9 { background: #d1c0a5; }
+     .g10 { background: #7CCD7C; }
+     .m { font-weight: bolder; font-size:26px; }
+     table {
+         margin: 0px auto;
+         height: 90vh;
+         width: 100%;
+         min-width: 1000px;
+     }
+     td {
+         width: 120px;
+         text-align: center;
+         font-size: 24px;
+         font-weight:500;
+         text-shadow: 1px 1px 5px #ddd;
+         line-height: 40pt;
+         border-radius: 5px;
+     }
+     td:not(.gundefined):hover {
+         cursor: crosshair; 
+         background-color: #00EEEE;
+         font-size: 26px;
+         font-weight: bold;
+         color: red;
+     }
+     .btngroup {
+         display: flex;
+         flex-flow: row nowrap;
+         justify-content: space-between;
+         width: 60%;
+         float:right;
+         height: 10vh;
+         padding: 4px 0;
+     }
+     .btngroup button {
+         color: white;
+         background-color: #5CACEE;
+         font-size: 18px;
+         margin-left: 3px;
+         border: 0px;
+         height: 100%;
+         width: 7em;
+     }
+     .btngroup button:hover {
+         cursor: pointer;
+         outline: 0px;
+     }
+     .btngroup > h3 {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         font-size: 18px;
+         width: 30%;
+         background-color: #ddd;
+     }
+     #note {
+         height: 100%;
+         width: 100%;
+         background-color: rgba(0,0,0,0.5);
+         position: fixed;
+         top: 0;
+         z-index: 2;
+         display: none;
+     }
+    </style>
+</head>
+
+<body>
+    <!-- main table -->
+    <table id="main"></table>
+    
+    <!-- button group -->
+    <div class="btngroup">
+        <h3>讲台</h3>
+        <div>
+            <button id="luckygo"></button>
+            <button id="notebtn">记事本</button>
+        </div>
+    </div>
+
+    <!-- copyright -->
+    <div style="position:absolute;width:50%;bottom:20px;z-index:2;font-size:2px;text-align:left;color:#C9C9C9">暴走猪头统一商标&nbsp;版本号：1.3</div>
+
+    <!-- note layer -->
+    <div id="note">
+        <div style="height:300px; width:600px; background-color:#FFFFFF; margin:60px auto">
+            <div style=" background-color:#0099FF; color:#FFFFFF; font-size:24px; padding:20px">记事本</div>
+            <div id="ji" style=" padding-top:10px; padding-left:20px; height:70px;background-color:#CCCCCC; color:#FFFFFF"></div>
+            <textarea id="text" style="height:80px; width:100%; font-size:18px;" placeholder="输入内容后，失去焦点即保存......"></textarea>
+            <button id="prev" style=" height:50px; width:90%; margin:10px 30px; background-color:#0099FF; color:#FFFFFF; border:0px;">退出</button>
+        </div>
+    </div>
+
+    <script>
+
+     /* 页面绘制 */
+     const all  = [
+         "吴东海/5", "凌岚森/4", "吴英平/1/", "郑凯铭/1","江树祥/10", "","胡剑飞/7/", "陈佩东/7",
+         "张能/5", "", "范锐/2/", "吴俊飞/1","王永发/2", "钟玉群/2", "韦宝玉/7", "伍世顺/7",
+         "张冬兰/6", "伍瑞麟/3", "杜志海/1", "秦树月/1","张鹏翼/10/", " 汤俊杰/10","邹尚雄/6", "王新炜/5/",
+         "邱志文/5", "文浩斌/3", "王强/3", "邓高盛/3","吴炳均/3", "邝勇团/10","陈锐豪/6", "李远志/6/",
+         "欧阳文强/4", "叶兴强/4", "刘佩景/3/", "谢贺锋/2","廖星云/9", "陈宪仲/9","黎楚/8", "潘桂树/8",
+         "张柏川/4/", "洪俊鹏/4", "钟威/9", "","黄文亮/9", "王海涛/9/","梁炜彬/8", "郭宇仔/8/",
+         "吕锦鸿/10", "", "李守综/5", "","苏国好/6", "","蒙宏钊/7", "张洪恩/8",
+     ].reverse(), cols = 8;
+
+     let result = [];
+     for(const [i, s] of all.entries()) {
+         let sarr = s.split("/"), name = sarr[0];
+         let styleClass = "g" + sarr[1] + (sarr.length > 2 ? " m" : "");
+         
+         if(i % cols == 0) result.push("<tr>");
+         result.push(`  <td class='${styleClass}'>${name}</td>`);
+         if(i % cols == cols-1 && i != all.length) result.push("</tr>");
+     }
+     main.innerHTML = result.join("\n");
+     
+     console.log(main.innerHTML);
+
+
+
+     /* 随机抽取 */
+     const beginLabel = "抽奖", stopLabel = "停止", interval = 30;
+     let timer, current, nodes = Array.from(document.querySelectorAll("td:not(.gundefined)"));
+     
+     luckygo.innerText = beginLabel;
+     
+     luckygo.addEventListener("click", function (e) {
+         if(nodes.length < 2) {
+             window.location.reload();
+         } else if (this.innerText == beginLabel) {
+             this.innerText = stopLabel;
+             timer = setInterval(() => {
+                 nodes.map(n => n.style.outline = "1px solid white");
+                 current = nodes[Math.floor(Math.random()*nodes.length)];
+                 current.style.outline = "1px green solid";
+             }, interval);
+         } else {
+             this.innerText = beginLabel;
+             clearInterval(timer);
+             nodes = nodes.filter(n => n != current);
+             current.style.cssText = "outline: none; background: red; color: white;";
+         }
+     });
+
+     /* 笔记本 */
+     notebtn.onclick = function() {
+         note.style.display = "block";
+         ji.innerText = localStorage.msg;
+     }
+     text.onblur = function() {
+         if(text.value != "") {
+             localStorage.msg = text.value;
+             ji.innerText = localStorage.msg;
+         }
+     };
+     prev.onclick = function() {
+         note.style.display = "none";
+         text.value = "";
+         text.style.placeholder = "输入内容后，失去焦点即保存......";
+     }
+     
+    </script>
+
+
+</body>
+
+</html>
+

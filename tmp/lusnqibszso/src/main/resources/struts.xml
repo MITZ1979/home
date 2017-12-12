@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE struts PUBLIC
+        "-//Apache Software Foundation//DTD Struts Configuration 2.5//EN"
+        "http://struts.apache.org/dtds/struts-2.5.dtd">
+<struts>
+
+    <constant name="struts.devMode" value="true" />
+
+
+    <package name="book" extends="struts-default">
+
+        <action name="bookinit" class="com.nf.lqbz.action.BookAction" method="bookinit">
+            <result type="redirectAction">booklist</result>
+        </action>
+
+        <action name="booklist" class="com.nf.lqbz.action.BookAction" method="booklist">
+            <result type="dispatcher" name="success">
+                /booklist.jsp
+            </result>
+        </action>
+
+        <action name="bookdel" class="com.nf.lqbz.action.BookAction" method="bookdel">
+            <result type="redirectAction">booklist</result>
+        </action>
+
+
+        <!--进入添加页面，包含 form -->
+        <!--如果不写 method，默认会调用 execute -->
+        <!--如果不写 class/method，默认会调用 ActionSupport#execute -->
+        <action name="bookadd">
+            <result>/bookadd.jsp</result>
+        </action>
+        <action name="booksave" class="com.nf.lqbz.action.BookAction" method="booksave">
+            <result type="redirectAction">booklist</result>
+        </action>
+
+    </package>
+
+
+    <package name="childBook" extends="book">
+
+    </package>
+
+</struts>

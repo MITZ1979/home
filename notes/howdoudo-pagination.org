@@ -1,0 +1,144 @@
+#+TITLE: 分页(Pagination)
+
+
+
+
+* Paginator 使用
+
+这是我们的[[https://github.com/13431/cases/blob/master/src/com/nf/howdoyoudo/pagination/Paginator.java][自己定义的分页类]], 我们必须要了解如何使用它。
+
+
+*首先，在服务端，创建分页对象，将所有跟分页相关的参数和数据都封装到分页对象里：*
+
+#+BEGIN_SRC java
+  // 1. 从用户请求中获取相应的分页参数
+  //    最重要的是 pageNumber(第几页), 其次可选的是 pageSize(每页多少条), linkSize(分页导航显示多少页码)
+  //    如果用户没有传递来这样的参数，初始化为默认值
+  int pageNumber = request.getParameter("pageno") == null ? 1 : Integer.parseInt(request.getParameter("pageno"));
+  int pageSize = 9;
+  int linkSize = 7;
+
+  // 2. 使用上面获取的参数，创建我们的分页对象
+  Paginator<Person> paginator = new Paginator<>(pageNumber, pageSize, linkSize);
+
+  // 3. 从数据库里，查询记录总数。然后将结果保存到分页对象中
+  int personCount = personDAO.getPersonCount();
+  paginator.setRowCount(personCount);
+
+  // 4. 从数据库里，查询分页数据。然后将结果保存到分页对象中
+  int offset = paginator.getOffset();   // 计算数据的序号
+  List<Person> persons = personDAO.findPersonsByPage(offset, pageSize);
+  paginator.setData(persons);
+
+  // 5. 将分页对象保存起来，用于页码渲染
+  req.setAttribute("paginator", paginator);
+  req.getRequestDispatcher("pages/pagination.jsp").forward(req, resp);
+
+#+END_SRC
+
+
+在方法 =PersonDAO#findPersonsByPage()= 里，我们将进行分页查询。
+这里给提供了一个示例方法，可以将普通的查询语句包装为分页查询语句。
+#+BEGIN_SRC java
+  // 将普通的查询语句，转换为一个分页查询语句
+  // MSSQL 中的一个简单示例, [用法示例]:
+  //    String pagedSQL = pageLimitSQL("select id, name, weixin from person where id > ?", "id", 200, 10);
+  //    ps = conn.prepareStatement(pageLimitSQL);
+  //    ps.setInteger(1, 33);
+  //    ...
+  public static String pageLimitSQL(String sql, String orderBy, int offset, int size) {
+      String sql_temp = "select * from ( select *, ROW_NUMBER() over (order by %s) _rn from ( %s ) as __o ) as __p where _rn >= %d and _rn < %d";
+      return String.format(sql_temp, orderBy, sql, offset, offset + size);
+  }
+
+#+END_SRC
+
+
+*其次，在 JSP 页码中，大致分为三部分：*
+1. 头部导航(header: =总共 m 页，当前 n 页=)
+2. 分页数据列表(table)
+3. 分页导航(nav: =Pre |1 | 2 | 3 | 4 | 5 | Next=)
+
+#+BEGIN_SRC html
+  <body>
+
+    <div id="main">
+      
+      <!-- 第一部分，头部导航 -->
+      <header>当前 ${pager.current} 页，总共 ${pager.pageCount} 页 </header>
+
+      <!-- 第二部分，数据展示 -->
+      <table>
+        <tr>
+          <th>ID</th> <th>名字</th> <th>微信</th>
+        </tr>
+        <c:forEach items="${pager.data}" var="i">
+          <tr>
+            <td>${i.id}</td> <td>${i.name}</td> <td>${i.weixin}</td>
+          </tr>
+        </c:forEach>
+      </table>
+
+      <!-- 第三部分，页码导航 -->
+      <nav style="text-align: center">
+        ${pager.outputPageNav("/url", "pageno", true, true);
+      </nav>
+      
+  </body>
+
+#+END_SRC
+
+因为 *页码导航栏* 的 html 基本是一致的，并且里面的计算逻辑有些无聊，所以最好单独封装在分页对象里。导航栏的样式需要通过外部 css 控制。
+这里，我们封装到了 =Paginator#outputPageNav()= 方法里，在 jsp 页码里直接使用 el 表达式调用就行了:
+: ${pager.outputPageNav("/url", "pageno", true, true)
+- 第一个参数代表分页的链接
+- 第二个参数代表用户链接中代表分页的字段的名字
+- 第三个参数代表是否要生成“首页/末页”
+- 第四个参数代表是否要生成“上页/下页”。
+
+* Paginator 封装
+
+如果数据量大的时候，数据全部取出来并显示在页面上基本是不现实的。
+1. 数据库忙死
+2. 数据传输慢死
+3. 用户的浏览器卡死
+4. 用户翻页累死
+5. 等等等
+
+所以需要一部分一部分显示，这就需要 *分页* 功能。分页是 web 开发需要掌握的基本技能。
+
+如果要分页，作为服务器，需要掌握用户的下面几个需求，这是基本需求：
+1. 要看第几页
+2. 每页显示多少条
+3. 分页导航栏怎么显示，显示多少页码
+
+所有这些参数需要用户通过请求的方式告知服务器。
+: /myrequest?pageNumber=x&pageSize=y&linkSize=z
+
+当然，不可能强制要求用户将这些参数全都传递给服务器。如果没有传递的话，服务器需要自己给这些参数初始值。
+比如， =pageNumber= 的初始值为 1。
+
+然后，我们需要使用这些参数查询数据库：
+1. 数据的总条数 rowCount: =select count(*) from table=
+2. 分页的数据 dataList: =select top 20 * from table=
+
+而且，我们需要获得分页导航栏要显示的页码等，这需要一定的计算过程。
+
+等等。
+
+按照 OO 思想，上面的一切，最好封装起来：既方便使用，又清晰明了。而且封装好了以后直接拿来用，很爽。
+
+比如，我们封装到一个类里，名字叫 =Paginator=:
+1. 我们需要将所有跟分页相关的参数放进去
+2. 我们需要将查询到的记录总数放进去
+3. 我们需要将数据库查询所用的页码计算放进去
+4. 我们需要将分页查询得到的数据放进去
+5. 我们需要将计算总页数，计算导航栏页码等也放进去
+
+总之，跟分页相关的一切，我们都可以封装到里面。
+
+如果封装好了，剩下就是使用了。
+
+先说这么多吧，累了，休息了。
+
+看代码，不懂问。

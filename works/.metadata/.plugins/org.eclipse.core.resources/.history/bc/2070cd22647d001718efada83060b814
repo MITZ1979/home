@@ -1,0 +1,16 @@
+create database studb;
+
+go
+
+use studb;
+
+go
+
+create table stuInfo (
+	stuNo		varchar(15) primary key identity,
+	stuName		varchar(20) not null,
+	stuSex		char(2),
+	stuAge		int,
+	score		decimal,	
+	className	varchar	10
+);

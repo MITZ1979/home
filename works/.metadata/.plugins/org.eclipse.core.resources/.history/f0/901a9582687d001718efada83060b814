@@ -1,0 +1,74 @@
+package entity;
+
+import java.math.BigDecimal;
+
+public class StuInfo {
+	private String stuNo;
+	private String stuName;
+	private String stuSex;
+	private int stuAge;
+	private BigDecimal score;
+	private String className;
+	
+	public StuInfo ( ) {}
+	
+	public StuInfo(String stuNo, String stuName, String stuSex, int stuAge, BigDecimal score, String className) {
+		super();
+		this.stuNo = stuNo;
+		this.stuName = stuName;
+		this.stuSex = stuSex;
+		this.stuAge = stuAge;
+		this.score = score;
+		this.className = className;
+	}
+
+	
+	public String getStuNo() {
+		return stuNo;
+	}
+
+	public void setStuNo(String stuNo) {
+		this.stuNo = stuNo;
+	}
+
+	public String getStuName() {
+		return stuName;
+	}
+
+	public void setStuName(String stuName) {
+		this.stuName = stuName;
+	}
+
+	public String getStuSex() {
+		return stuSex;
+	}
+
+	public void setStuSex(String stuSex) {
+		this.stuSex = stuSex;
+	}
+
+	public int getStuAge() {
+		return stuAge;
+	}
+
+	public void setStuAge(int stuAge) {
+		this.stuAge = stuAge;
+	}
+
+	public float getScore() {
+		return score;
+	}
+
+	public void setScore(float score) {
+		this.score = score;
+	}
+
+	public String getClassName() {
+		return className;
+	}
+
+	public void setClassName(String className) {
+		this.className = className;
+	}
+	
+}

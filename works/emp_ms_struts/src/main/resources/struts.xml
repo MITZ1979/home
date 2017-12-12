@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE struts PUBLIC
+        "-//Apache Software  //DTD Struts Configuration 2.5//EN"
+        "http://struts.apache.org/dtds/struts-2.5.dtd">
+
+
+<struts>
+    <!--开启调试模式-->
+    <constant name="struts.devMode" value="true" />
+    <!--默认的扩展名为 .action，但是我们可以定制它-->
+    <constant name="struts.action.extension" value="php,hph,hhp" />
+
+
+    <package name="mp" abstract="true" extends="json-default">
+        <global-results>
+            <result name="error">/error.jsp</result>
+        </global-results>
+
+        <global-exception-mappings>
+            <exception-mapping exception="java.lang.Exception" result="error" />
+        </global-exception-mappings>
+    </package>
+
+
+    <!--员工模块-->
+    <package name="emp" namespace="/emp" extends="mp" strict-method-invocation="false">
+
+        <global-results>
+            <result>/view/emp/emplist.jsp</result>
+        </global-results>
+
+        <!--
+          url: /emplist
+          由哪个类 的哪个方法 去处理，
+          如果请求成功，应该由哪个JSP去渲染页面
+        -->
+        <action name="emplist" class="com.nf.empst.action.EmpAction" method="emplist" />
+
+        <action name="*" class="com.nf.empst.action.EmpAction" method="{1}">
+
+            <!--dispatcher 转发到某个 html/jsp-->
+            <!--chain      转发到某个 action-->
+            <!--redirect 重定向到某个 html/jsp-->
+            <!--redirectAction 重定向某个 action-->
+            <!--plainText 返回文本的内容-->
+            <!--stream 返回二进制/文本流，可以用于上传下载，可以用于操作 json-->
+            <!--json 将对象序列化为 json 字符串并返回，需要 struts2-json-plugin 支持-->
+
+            <result name="jsonsuccess0" type="json">
+                <param name="root">#request.xxx.{#{"name": name, "salary": salary}}</param>
+            </result>
+
+            <result name="jsonsuccess" type="json">
+                <param name="root">#request.xxx</param>
+                <param name="excludeProperties">
+                    \[\d+\]\.department\.employees,
+                    \[\d+\]\.members,
+                    \[\d+\]\.manager
+                </param>
+            </result>
+
+            <result name="testsuccess" type="plainText">
+                <param name="location">/view/emp/emplist.jsp</param>
+                <param name="charSet">UTF-8</param>
+            </result>
+
+            <result name="input">/view/emp/emplist.jsp</result>
+
+            <result type="redirectAction">emplist</result>
+
+            <result name="empinfo">/view/emp/empinfo.jsp</result>
+        </action>
+    </package>
+
+
+    <!--部门模块-->
+    <package name="dept" namespace="/dept" extends="mp">
+        <action class="com.nf.empst.action.DeptAction" name="deptinfo" method="deptinfo">
+            <result>/view/dept/deptinfo.jsp</result>
+        </action>
+    </package>
+
+
+    <!--图书模块-->
+    <package name="book" namespace="/book" extends="mp">
+        <action name="bookinit" class="com.nf.empst.action.BookAction" method="bookinit">
+            <result type="redirectAction">booklist</result>
+        </action>
+
+        <action name="booklist" class="com.nf.empst.action.BookAction" method="booklist">
+            <result type="dispatcher" name="success">
+                /view/book/booklist.jsp
+            </result>
+        </action>
+
+        <action name="bookdel" class="com.nf.empst.action.BookAction" method="bookdel">
+            <result type="redirectAction">booklist</result>
+        </action>
+
+        <!--进入添加页面，包含 form -->
+        <!--如果不写 method，默认会调用 execute -->
+        <!--如果不写 class/method，默认会调用 ActionSupport#execute -->
+        <action name="bookadd">
+            <result>/view/book/bookadd.jsp</result>
+        </action>
+        <action name="booksave" class="com.nf.empst.action.BookAction" method="booksave">
+            <result type="redirectAction">booklist</result>
+        </action>
+    </package>
+
+
+    <!--其他模块-->
+    <include file="struts-another.xml" />
+    
+</struts>

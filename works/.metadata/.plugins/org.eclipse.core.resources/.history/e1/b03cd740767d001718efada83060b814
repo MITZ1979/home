@@ -1,0 +1,116 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>学生查询管理系统</title>
+
+<style>
+	.container {
+		max-width: 900px;
+		margin: 10px auto;
+	}
+	header {
+		text-align: center;
+	}
+	
+	.caption {
+		display: flex;
+		justify-content: space-between;
+		margin-bottom: 10px;
+	}
+	
+	table {
+		width: 100%;
+	}
+
+</style>
+
+<script src="js/jquery-3.1.1.min.js"></script>
+<script>
+
+
+// 加载完
+$(function () {
+	$.get("stulist", "", function (res) {
+		var innerHtml = "";
+		$.each(res, function (k, v) {
+			innerHtml = innerHtml + "<tr>"
+				+ "<td><input type='checkbox' name='item' value='" + v.stuNo + "'></td>"
+				+ "<td>" + v.stuNo + "</td>"
+				+ "<td>" + v.stuName + "</td>"
+				+ "<td>" + v.stuAge + "</td>"
+				+ "<td>" + v.stuSex + "</td>"
+				+ "<td>" + v.score + "</td>"
+				+ "</tr>";
+		});
+		$(".main table").html(innerHtml);
+	}, "json");
+
+	$("#fuzzyQuery").click(function () {
+		$.get("stulist", {condition: $("#condition").val()}, function (res) {
+			var innerHtml = "";
+			$.each(res, function (k, v) {
+				innerHtml = innerHtml + "<tr>"
+					+ "<td><input type='checkbox' name='item' value='" + v.stuNo + "'></td>"
+					+ "<td>" + v.stuNo + "</td>"
+					+ "<td>" + v.stuName + "</td>"
+					+ "<td>" + v.stuAge + "</td>"
+					+ "<td>" + v.stuSex + "</td>"
+					+ "<td>" + v.score + "</td>"
+					+ "</tr>";
+			});
+			$(".main table").html(innerHtml);
+		}, "json");
+	});
+	
+	$("#delbutton").click(function () {
+		
+		/* if(!window.confirm("你是否要删除？")) return;
+		 */
+		/* var items = $("input:checkbox:checked");
+		$.each(items,function(){
+			alert($(this).val());
+		}) */
+	/* 	$.get("studel", {"items":items.val()}, function () {
+			alert("chengong");
+			window.location.refresh();
+		}); */
+	});
+
+
+});
+
+
+</script>
+
+</head>
+<body>
+
+<div class="container">
+	<header>
+		<h1>学生管理系统</h1>
+	</header>
+	
+	<div class="caption">
+		<div>
+			<span>条件:</span>
+			<input id="condition" name="condition" >
+			<button id="fuzzyQuery">模糊查询</button>
+		</div>
+		<button id="delbutton">删除</button>
+	</div>
+	
+	<div class="main">
+	<form>
+		<table border=1>
+				
+		</table>
+		</form>
+	</div>
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="Gradle : com.nf : lusnqibszso-1.0-SNAPSHOT.war (exploded)">
+    <output-path>$PROJECT_DIR$/build/libs/exploded/lusnqibszso-1.0-SNAPSHOT.war</output-path>
+    <properties id="gradle-properties">
+      <options external-project-path="$PROJECT_DIR$">
+        <manifest>TWFuaWZlc3QtVmVyc2lvbjogMS4wDQoNCg==</manifest>
+      </options>
+    </properties>
+    <root id="root">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/build/libs/exploded/lusnqibszso-1.0-SNAPSHOT.war/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="javaee-facet-resources" facet="lusnqibszso_main/web/Web Gradle : lusnqibszso-1.0-SNAPSHOT.war" />
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="lusnqibszso_main" />
+          <element id="dir-copy" path="$PROJECT_DIR$/out/production/resources" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="Gradle: org.apache.struts:struts2-core:2.5.13" />
+          <element id="library" level="project" name="Gradle: org.freemarker:freemarker:2.3.23" />
+          <element id="library" level="project" name="Gradle: ognl:ognl:3.1.15" />
+          <element id="library" level="project" name="Gradle: org.apache.logging.log4j:log4j-api:2.8.2" />
+          <element id="library" level="project" name="Gradle: commons-fileupload:commons-fileupload:1.3.3" />
+          <element id="library" level="project" name="Gradle: commons-io:commons-io:2.5" />
+          <element id="library" level="project" name="Gradle: org.apache.commons:commons-lang3:3.6" />
+          <element id="library" level="project" name="Gradle: org.javassist:javassist:3.20.0-GA" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

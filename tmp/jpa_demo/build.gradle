@@ -1,0 +1,27 @@
+group 'com.nf'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+
+    compile(
+            "org.hibernate:hibernate-core:5.2.11.Final",
+            "javax.servlet:jstl:1.2",
+            "cn.easyproject:ojdbc7:12+",
+            "junit:junit:+"
+    )
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}

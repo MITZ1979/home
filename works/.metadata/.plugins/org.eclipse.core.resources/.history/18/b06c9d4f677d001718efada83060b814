@@ -1,0 +1,13 @@
+package dao;
+
+import java.util.List;
+
+import entity.StuInfo;
+
+public class StuDAO {
+	public List<StuInfo> listAll() {
+		String sql = "select * from stuinfo";
+		
+		return BaseDao.preparedQuery(StuInfo.class, sql);
+	}
+}

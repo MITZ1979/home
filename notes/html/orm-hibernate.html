@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hibernate</title>
+<!-- 2017-10-16 Mon 16:21 -->
+<meta  charset="utf-8">
+<meta  name="generator" content="Org-mode">
+<meta  name="author" content="imfine">
+<meta  name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/base.css">
+<script src="assets/base.js"></script>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href="index.html"> UP </a>
+ |
+ <a accesskey="H" href="index.html"> HOME </a>
+</div><div id="content">
+<h1 class="title">Hibernate</h1>
+<nav id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1. 序</a></li>
+<li><a href="#sec-2">2. Session</a>
+<ul>
+<li><a href="#sec-2-1">2.1. get/load/query()</a></li>
+<li><a href="#sec-2-2">2.2. flush/refresh()</a></li>
+<li><a href="#sec-2-3">2.3. clear/evict()</a></li>
+<li><a href="#sec-2-4">2.4. save/persist()</a></li>
+<li><a href="#sec-2-5">2.5. update/merge()</a></li>
+<li><a href="#sec-2-6">2.6. doWork</a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3. Identifier</a></li>
+<li><a href="#sec-4">4. Association</a>
+<ul>
+<li><a href="#sec-4-1">4.1. 1-N</a></li>
+<li><a href="#sec-4-2">4.2. M-N</a></li>
+<li><a href="#sec-4-3">4.3. 1-1</a></li>
+<li><a href="#sec-4-4">4.4. Embed</a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5. Inheritance</a>
+<ul>
+<li><a href="#sec-5-1">5.1. SINGLE_TABLE</a></li>
+<li><a href="#sec-5-2">5.2. JOINED</a></li>
+<li><a href="#sec-5-3">5.3. TABLE_PER_CLASS(union)</a></li>
+<li><a href="#sec-5-4">5.4. MappedSuperclass</a></li>
+</ul>
+</li>
+<li><a href="#sec-6">6. 级联(Cascade)</a>
+<ul>
+<li><a href="#sec-6-1">6.1. 删除数据的方式</a></li>
+</ul>
+</li>
+<li><a href="#sec-7">7. 查询</a>
+<ul>
+<li><a href="#sec-7-1">7.1. get/load</a></li>
+<li><a href="#sec-7-2">7.2. Query</a></li>
+<li><a href="#sec-7-3">7.3. Criteria</a></li>
+<li><a href="#sec-7-4">7.4. NativeSQL</a></li>
+<li><a href="#sec-7-5">7.5. NameQuery</a></li>
+</ul>
+</li>
+<li><a href="#sec-8">8. Query Strategy</a></li>
+<li><a href="#sec-9">9. N+1 问题</a></li>
+<li><a href="#sec-10">10. 缓存(Cache)</a></li>
+<li><a href="#sec-11">11. 锁(Lock)</a></li>
+</ul>
+</div>
+</nav>
+
+<section id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> 序</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+创建 hibernate 工程示例：
+</p>
+<ol class="org-ol">
+<li>创建工程，引入 jar 包
+</li>
+<li>创建配置文件 hibernate.cfg.xml, 配置数据库连接
+</li>
+<li>编写实体类(<code>entity</code>), 标明注解, 然后配置在 hibernate.cfg.xml 中
+</li>
+<li>创建 <code>SessionFactory</code>, 获取 <code>Session</code>, 通过操作实体类操作数据库。
+</li>
+</ol>
+</div>
+</section>
+
+<section id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Session</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+对象的三种状态：
+</p>
+<ol class="org-ol">
+<li><code>Transient</code>, 瞬时状态，指的是对象已经被初始化，但没有跟 hibernate 的 session 建立过联系，即数据库里没有数据对应。
+</li>
+<li><code>Persistent</code>, 持久化状态，指的是对象在数据中有对应数据，对象有 id 值。它可能是通过 save 或 load 等方式得到的，并且在 session 缓存中有定义。
+</li>
+<li><code>Detached</code>, 脱管状态，曾经被持久，在数据库中有数据对应。但是，在 session 缓存里没有记录。也许是 session 关闭了，也许是清空了。
+</li>
+</ol>
+
+<p>
+状态之间可以进行转换，下面是大致的转换流程：
+</p>
+
+<figure>
+<p><img src="assets/image/orm-hibernate/hibernate_ostatus_2017-09-21_10-08-32.svg" alt="hibernate_ostatus_2017-09-21_10-08-32.svg">
+</p>
+</figure>
+</div>
+
+
+<div id="outline-container-sec-2-1" class="outline-3">
+<h3 id="sec-2-1"><span class="section-number-3">2.1</span> get/load/query()</h3>
+<div class="outline-text-3" id="text-2-1">
+<ul class="org-ul">
+<li>get/load 会优先在 session 缓存里寻找对象，如果找不到，再去查询数据库
+</li>
+<li>query 会直接查询数据库
+</li>
+<li>get 不懒，会立刻查询。如果没有找到，那么返回 null
+</li>
+<li>load 延迟加载，立刻返回一个代理对象。如果没有找到，那么抛出异常
+</li>
+<li><code>LazyInitializationException</code> !!!
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-2-2" class="outline-3">
+<h3 id="sec-2-2"><span class="section-number-3">2.2</span> flush/refresh()</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+flush 将 session 缓存里的数据同步到数据库，触发相应的 sql 语句。
+</p>
+
+<p>
+以下情况，会触发 flush 操作：
+</p>
+<ol class="org-ol">
+<li>调用 commit 的时候，会触发 session.flush() 操作。
+</li>
+<li>执行 session.createQuery() 查询的时候，也会触发 flush 操作。
+</li>
+<li>手动执行 flush 操作。
+</li>
+</ol>
+
+<p>
+refresh 是将数据库里的信息，同步到 session 缓存。
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2-3" class="outline-3">
+<h3 id="sec-2-3"><span class="section-number-3">2.3</span> clear/evict()</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+从 session 缓存中清理数据
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2-4" class="outline-3">
+<h3 id="sec-2-4"><span class="section-number-3">2.4</span> save/persist()</h3>
+<div class="outline-text-3" id="text-2-4">
+<p>
+都是用来将瞬时对象变为持久化对象，即将数据插入数据库，对应 insert 语句。
+</p>
+
+<p>
+save 是 hibernate 原生的语法，persist 是 jpa 的语法。
+</p>
+
+<p>
+在执行的时候，不会立刻插入数据，只有执行了 flush 操作，才真正触发数据库操作。
+</p>
+
+<p>
+save/persist 方法会立刻为实体类对象生成主键。
+</p>
+
+<p>
+他们的区别是, 如果在保存之前，重新手动赋予了主键：
+</p>
+<ol class="org-ol">
+<li>save 会忽视你的赋值
+</li>
+<li>persist 会抛异常
+</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-sec-2-5" class="outline-3">
+<h3 id="sec-2-5"><span class="section-number-3">2.5</span> update/merge()</h3>
+<div class="outline-text-3" id="text-2-5">
+<ul class="org-ul">
+<li>他们主要用来完成实体类对象的修改，对应的是 update 语句。
+</li>
+<li>若更新一个持久化对象，可以不显式调用 update, 因为 flush 操作会触发 update
+</li>
+<li>可以将一个脱管对象转换为持久化对象
+</li>
+<li>merge 是 jpa 中的语法
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-2-6" class="outline-3">
+<h3 id="sec-2-6"><span class="section-number-3">2.6</span> doWork</h3>
+<div class="outline-text-3" id="text-2-6">
+<p>
+可以将 jdbc 的 connection 对象暴露出来，用于插入一些 jdbc 操作语法。
+</p>
+</div>
+</div>
+</section>
+
+
+
+
+<section id="outline-container-sec-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Identifier</h2>
+<div class="outline-text-2" id="text-3">
+<div class="org-src-container">
+
+<pre class="src src-sql"><span class="org-comment">-- JPA &#40664;&#35748;</span>
+@GeneratedValue<span class="org-rainbow-delimiters-depth-1">(</span>strategy = GenerationType.AUTO/<span class="org-keyword">IDENTITY</span>/<span class="org-keyword">SEQUENCE</span>/<span class="org-keyword">TABLE</span><span class="org-rainbow-delimiters-depth-1">)</span>
+
+<span class="org-comment">-- JPA &#23450;&#21046;&#24207;&#21015;/Table</span>
+@GeneratedValue<span class="org-rainbow-delimiters-depth-1">(</span>generator = "xxx"<span class="org-rainbow-delimiters-depth-1">)</span>
+@SequenceGenerator<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">name</span> = "xxx", sequenceName = "seq_xxx", associateSize = 1<span class="org-rainbow-delimiters-depth-1">)</span>
+@TableGenerator<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">name</span> = "xxx", <span class="org-keyword">table</span> = "tb_xxx"<span class="org-rainbow-delimiters-depth-1">)</span>
+
+<span class="org-comment">-- Hibernate &#26684;&#24335;&#30340; generator:</span>
+@GeneratedValue<span class="org-rainbow-delimiters-depth-1">(</span>generator = "yyy"<span class="org-rainbow-delimiters-depth-1">)</span>
+@GenericGenerator<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">name</span> = "yyy", strategy = "native"<span class="org-rainbow-delimiters-depth-1">)</span>
+@GenericGenerator<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">name</span> = "yyy", strategy = "uuid2"<span class="org-rainbow-delimiters-depth-1">)</span>
+@GenericGenerator<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-keyword">name</span> = "yyy", strategy = "<span class="org-keyword">table</span>"<span class="org-rainbow-delimiters-depth-1">)</span>
+</pre>
+</div>
+</div>
+</section>
+<section id="outline-container-sec-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Association</h2>
+<div class="outline-text-2" id="text-4">
+</div><div id="outline-container-sec-4-1" class="outline-3">
+<h3 id="sec-4-1"><span class="section-number-3">4.1</span> 1-N</h3>
+<div class="outline-text-3" id="text-4-1">
+<p>
+一对多的关系，在数据库的角度，需要使用外键维护这种关系。
+</p>
+
+<p>
+一般情况下，在多的一边的表上，建立一个外键映射到另一个表。
+</p>
+
+<p>
+比如，有两个表 author, book 一般而言，book 的定义类似是这样的：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-sql"><span class="org-keyword">create</span> <span class="org-keyword">table</span> <span class="org-function-name">book</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    bookid <span class="org-type">int</span> <span class="org-keyword">primary</span> <span class="org-keyword">key</span>,
+    <span class="org-keyword">name</span> varchar2<span class="org-rainbow-delimiters-depth-2">(</span>20<span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-keyword">not</span> <span class="org-keyword">null</span>,
+    price <span class="org-type">float</span>,
+    publish_date <span class="org-type">date</span> <span class="org-keyword">default</span> sysdate,
+
+    <span class="org-comment">-- &#19979;&#38754;&#23383;&#27573;&#29992;&#26469;&#32500;&#25252;&#36319;&#20316;&#32773;&#30340;&#20851;&#31995;</span>
+    <span class="org-comment">-- &#23427;&#26159;&#19968;&#20010;&#22806;&#38190;&#32422;&#26463;</span>
+    authorid <span class="org-keyword">references</span> author
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+book/author 分别对应实体类 Book/Author，我们可以在其中任意一个实体类中，设置他们的关系。
+</p>
+
+<p>
+如果只是在其中一个中设置关系，那么叫“单边关系”、“单向关联”，否则是“双向关联”。
+</p>
+
+<p>
+其中最常用的是 <b>多对一的单向关联</b> 和 <b>多对一的双向关联</b>。
+</p>
+
+<p>
+多对一的单向：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Author</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Book</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+    <span class="org-keyword">private</span> <span class="org-type">FLoat</span> <span class="org-variable-name">price</span>;
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#21482;&#26159;&#22312;&#22810;&#30340;&#19968;&#27573;&#35774;&#32622;&#20851;&#31995;&#12290;&#36825;&#26159;&#38750;&#24120;&#24120;&#29992;&#30340;&#19968;&#31181;&#26041;&#24335;&#12290;</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#29992; @JoinColumn &#23450;&#21046;&#22806;&#38190;&#23383;&#27573;&#30340;&#21517;&#23383;</span>
+    <span class="org-c-annotation">@ManyToOne</span> <span class="org-c-annotation">@JoinColumn</span>
+    <span class="org-keyword">private</span> <span class="org-type">Author</span> <span class="org-variable-name">author</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+多对一的双向关系：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">&#22810;&#30340;&#19968;&#31471;&#65292;&#21363;&#20027;&#31471;&#65292;&#38656;&#35201;&#36127;&#36131;&#32500;&#25252;&#20851;&#31995;</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Book</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+    <span class="org-keyword">private</span> <span class="org-type">FLoat</span> <span class="org-variable-name">price</span>;
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#21482;&#26159;&#22312;&#22810;&#30340;&#19968;&#31471;&#35774;&#32622;&#20851;&#31995;&#12290;&#36825;&#26159;&#38750;&#24120;&#24120;&#29992;&#30340;&#19968;&#31181;&#26041;&#24335;&#12290;</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#29992; @JoinColumn &#23450;&#21046;&#22806;&#38190;&#23383;&#27573;&#30340;&#21517;&#23383;</span>
+    <span class="org-c-annotation">@ManyToOne</span> <span class="org-c-annotation">@JoinColumn</span>
+    <span class="org-keyword">private</span> <span class="org-type">Author</span> <span class="org-variable-name">author</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#19968;&#30340;&#19968;&#31471;&#65292;&#21363;&#20174;&#31471;&#65292;&#38656;&#35201;&#24403;&#29993;&#25163;&#25484;&#26588;</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Author</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#19981;&#35201;&#35753;&#21452;&#26041;&#37117;&#21435;&#32500;&#25252;&#20851;&#31995;&#65292;&#19981;&#28982;&#20250;&#26377;&#20914;&#31361;&#25110;&#37325;&#22797;&#12290;</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#19968;&#33324;&#24773;&#20917;&#19979;&#65292;&#38656;&#35201;&#35753;&#22810;&#30340;&#19968;&#31471;&#32500;&#25252;&#20851;&#31995;&#21363;&#21487;&#12290;&#36825;&#37324;&#29992; mappedBy &#34920;&#21517;&#65292;&#33258;&#24049;&#24403;&#29993;&#25163;&#25484;&#26588;&#12290;</span>
+    <span class="org-c-annotation">@OneToMany</span><span class="org-rainbow-delimiters-depth-2">(</span>mappedBy = <span class="org-string">"author"</span><span class="org-rainbow-delimiters-depth-2">)</span>
+    <span class="org-keyword">private</span> <span class="org-type">Set</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">Books</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">books</span> = <span class="org-keyword">new</span> <span class="org-type">HashSet</span><span class="org-rainbow-delimiters-depth-2">&lt;&gt;()</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+<b>在数据插入的时候，要先保存一的一端，再保存多的一端，否则，会有冗余的 SQL 语句。</b>
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2" class="outline-3">
+<h3 id="sec-4-2"><span class="section-number-3">4.2</span> M-N</h3>
+<div class="outline-text-3" id="text-4-2">
+<ul class="org-ul">
+<li>多对多的关系，需要使用中间表维护双方关系。对应的注解为 <code>@ManyToMany</code>
+</li>
+<li>必须为双方制定从属关系，也就是将维护关系的责任交给其中一个实体类(<code>mappedBy</code>)，从而避免重复或冲突。
+</li>
+<li>可以使用 <code>@JoinTable</code> 对中间表进行定制
+</li>
+</ul>
+
+<p>
+例子：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Emp</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@ManyToMany</span>   <span class="org-comment-delimiter">// </span><span class="org-comment">&#36127;&#36131;&#20851;&#31995;&#30340;&#32500;&#25252;</span>
+    <span class="org-c-annotation">@JoinTable</span><span class="org-rainbow-delimiters-depth-2">(</span>...<span class="org-rainbow-delimiters-depth-2">)</span>
+    <span class="org-keyword">private</span> <span class="org-type">Set</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">Project</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">projects</span> = <span class="org-keyword">new</span> <span class="org-type">HashSet</span><span class="org-rainbow-delimiters-depth-2">&lt;&gt;()</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Project</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@ManyToMany</span><span class="org-rainbow-delimiters-depth-2">(</span>mappedBy = <span class="org-string">"projects"</span><span class="org-rainbow-delimiters-depth-2">)</span>  <span class="org-comment-delimiter">// </span><span class="org-comment">&#29993;&#25163;&#25484;&#26588;</span>
+    <span class="org-keyword">private</span> <span class="org-type">Set</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">emps</span> = <span class="org-keyword">new</span> <span class="org-type">HashSet</span><span class="org-rainbow-delimiters-depth-2">&lt;&gt;()</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-3" class="outline-3">
+<h3 id="sec-4-3"><span class="section-number-3">4.3</span> 1-1</h3>
+<div class="outline-text-3" id="text-4-3">
+<p>
+两种方式：
+</p>
+<ol class="org-ol">
+<li>在其中一个表上创建一个列，保存另一个表的主键。即外键关联。
+</li>
+<li>两个表，有关联的数据，使用相同的主键。即主键关联。
+</li>
+</ol>
+
+<p>
+<b>外键关联:</b>
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span>  <span class="org-comment-delimiter">// </span><span class="org-comment">&#20027;&#38190;&#33258;&#21160;&#29983;&#25104;</span>
+    <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+
+    <span class="org-c-annotation">@OneToOne</span> <span class="org-c-annotation">@JoinColumn</span>   <span class="org-comment-delimiter">// </span><span class="org-comment">&#36127;&#36131;&#32500;&#25252;&#22806;&#38190;</span>
+    <span class="org-keyword">private</span> <span class="org-type">IdCard</span> <span class="org-variable-name">idcard</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">IdCard</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#20027;&#38190;&#33258;&#21160;&#29983;&#25104;</span>
+    <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+
+    <span class="org-c-annotation">@OneToOne</span><span class="org-rainbow-delimiters-depth-2">(</span>mappedBy=<span class="org-string">"idcard"</span><span class="org-rainbow-delimiters-depth-2">)</span>  <span class="org-comment-delimiter">// </span><span class="org-comment">&#29993;&#25163;&#25484;&#26588;</span>
+    <span class="org-keyword">private</span> <span class="org-type">Person</span> <span class="org-variable-name">person</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+<b>主键关联:</b>
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span>       <span class="org-comment-delimiter">// </span><span class="org-comment">&#20027;&#38190;*&#19981;&#35201;*&#33258;&#21160;&#29983;&#25104;!!</span>
+    <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+
+    <span class="org-c-annotation">@OneToOne</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#36127;&#36131;&#32500;&#25252;&#22806;&#38190;&#65292;&#23558;&#22806;&#38190;&#26144;&#23556;&#21040;&#20027;&#38190;&#12290;&#21363;&#23558;&#21478;&#19968;&#24352;&#34920;&#30340;&#22806;&#38190;&#26144;&#23556;&#21040;&#26412;&#34920;&#30340;&#20027;&#38190;&#12290;</span>
+    <span class="org-c-annotation">@MapsId</span> <span class="org-c-annotation">@JoinColumn</span><span class="org-rainbow-delimiters-depth-2">(</span>name = <span class="org-string">"id"</span><span class="org-rainbow-delimiters-depth-2">)</span> 
+    <span class="org-keyword">private</span> <span class="org-type">IdCard</span> <span class="org-variable-name">idcard</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">IdCard</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-c-annotation">@GeneratedValue</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#20027;&#38190;&#33258;&#21160;&#29983;&#25104;</span>
+    <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+
+    <span class="org-c-annotation">@OneToOne</span><span class="org-rainbow-delimiters-depth-2">(</span>mappedBy=<span class="org-string">"idcard"</span><span class="org-rainbow-delimiters-depth-2">)</span>  <span class="org-comment-delimiter">// </span><span class="org-comment">&#29993;&#25163;&#25484;&#26588;</span>
+    <span class="org-keyword">private</span> <span class="org-type">Person</span> <span class="org-variable-name">person</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-sec-4-4" class="outline-3">
+<h3 id="sec-4-4"><span class="section-number-3">4.4</span> Embed</h3>
+<div class="outline-text-3" id="text-4-4">
+<p>
+这不属于关联关系，只是一种包含：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">class</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Embedded</span>
+    <span class="org-keyword">private</span> <span class="org-type">Name</span> <span class="org-variable-name">name</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Embeddable</span>
+<span class="org-keyword">class</span> <span class="org-type">Name</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-type">String</span> <span class="org-variable-name">firstName</span>;
+    <span class="org-type">String</span> <span class="org-variable-name">lastName</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+</div>
+</div>
+</section>
+
+<section id="outline-container-sec-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Inheritance</h2>
+<div class="outline-text-2" id="text-5">
+</div><div id="outline-container-sec-5-1" class="outline-3">
+<h3 id="sec-5-1"><span class="section-number-3">5.1</span> SINGLE_TABLE</h3>
+<div class="outline-text-3" id="text-5-1">
+<p>
+将所有的东西塞进 <b>一张表</b> 中，即所有的子类跟父类使用一张表，
+在这张表中使用“区别列”(DiscriminatorColumn)来区分各个类。
+</p>
+
+<p>
+这是默认的继承策略。
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-c-annotation">@Inheritance</span><span class="org-rainbow-delimiters-depth-1">(</span>strategy = <span class="org-constant">InheritanceType</span>.SINGLE_TABLE<span class="org-rainbow-delimiters-depth-1">)</span>
+<span class="org-c-annotation">@DiscriminatorColumn</span><span class="org-rainbow-delimiters-depth-1">(</span>name = <span class="org-string">"xxx"</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#21487;&#20197;&#23450;&#21046;&#20998;&#21106;&#21015;&#30340;&#21517;&#23383;</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-c-annotation">@DiscriminatorValue</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"&#29399;"</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#21487;&#20197;&#23450;&#21046;</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> Dog <span class="org-type">extend</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{}</span>
+</pre>
+</div>
+
+<p>
+它并不符合范式，但也有自己的优点：
+</p>
+<ul class="org-ul">
+<li>使用了区别的列
+</li>
+<li>只使用了一张表，所以查询速度快
+</li>
+<li>缺点：子类的独有列，不能添加唯一/非空约束
+</li>
+<li>缺点：太多冗余字段
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-5-2" class="outline-3">
+<h3 id="sec-5-2"><span class="section-number-3">5.2</span> JOINED</h3>
+<div class="outline-text-3" id="text-5-2">
+<p>
+是一种完全“符合范式”的设计：
+</p>
+<ul class="org-ul">
+<li>将所有共有的属性提取到父表中
+</li>
+<li>仅将子类特有的属性保存到子表中
+</li>
+<li>父表跟子表通过外键的方式建立关系
+</li>
+<li>如果查询子表的详细数据，通过关联查询关联相关表即可
+</li>
+</ul>
+
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-c-annotation">@Inheritance</span><span class="org-rainbow-delimiters-depth-1">(</span>strategy = <span class="org-constant">InheritanceType</span>.JOINED<span class="org-rainbow-delimiters-depth-1">)</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{</span> <span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@PrimaryKeyJoinColumn</span><span class="org-rainbow-delimiters-depth-1">(</span>name = <span class="org-string">"xxxxid"</span><span class="org-rainbow-delimiters-depth-1">)</span>  <span class="org-comment-delimiter">// </span><span class="org-comment">&#21487;&#20197;&#23450;&#21046;&#20851;&#32852;&#20027;&#38190;</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> Dog <span class="org-type">extend</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{</span> <span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+总结：
+</p>
+<ul class="org-ul">
+<li>优点：没有任何冗余
+</li>
+<li>缺点：查询的效率低，因为需要关联各张表
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-5-3" class="outline-3">
+<h3 id="sec-5-3"><span class="section-number-3">5.3</span> TABLE_PER_CLASS(union)</h3>
+<div class="outline-text-3" id="text-5-3">
+<p>
+每个类对应一张表，大家互相隔离，各自为政!
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-c-annotation">@Inheritance</span><span class="org-rainbow-delimiters-depth-1">(</span>strategy = <span class="org-constant">InheritanceType</span>.TABLE_PER_CLASS<span class="org-rainbow-delimiters-depth-1">)</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{</span> <span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> Dog <span class="org-type">extend</span> <span class="org-type">Animal</span> <span class="org-rainbow-delimiters-depth-1">{</span> <span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+总结：
+</p>
+<ul class="org-ul">
+<li>优点：独立，自由，查询快
+</li>
+<li>如果只查询子类，那么不需要任何关联；但如果查询父类的话，需要使用 Union 关联各表
+</li>
+<li>缺点：存在冗余字段
+</li>
+<li>缺点：如果要更新父类中的字段，每个子表都需要去更新
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-5-4" class="outline-3">
+<h3 id="sec-5-4"><span class="section-number-3">5.4</span> MappedSuperclass</h3>
+<div class="outline-text-3" id="text-5-4">
+<p>
+如果父类不是 Entity，只是为子类提供公共属性，那么，将其注解为 <code>@MappedSuperclass</code> 即可。
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@MappedSuperclass</span>
+<span class="org-keyword">abstract</span> <span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-c-annotation">@Column</span> <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> Girl <span class="org-type">extend</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">wechat</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+
+<span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> Boy <span class="org-type">extend</span> <span class="org-type">Person</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">address</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+**
+</p>
+</div>
+</div>
+</section>
+<section id="outline-container-sec-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> 级联(Cascade)</h2>
+<div class="outline-text-2" id="text-6">
+<p>
+比如说，一个部门有很多员工，它们是多对一的关系。如果我们要删除1号部门：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-type">Dept</span> <span class="org-variable-name">d</span> = session.load<span class="org-rainbow-delimiters-depth-1">(</span>Dept.<span class="org-keyword">class</span>, 1L<span class="org-rainbow-delimiters-depth-1">)</span>;
+session.delete<span class="org-rainbow-delimiters-depth-1">(</span>d<span class="org-rainbow-delimiters-depth-1">)</span>;
+</pre>
+</div>
+
+<p>
+我们会删除失败并得到一个异常，因为部门被员工数据引用，所以要删除部门前，需要先将引用到部门的所有员工删掉。
+</p>
+
+<p>
+如果我们不想手动删除部门内部员工，那么可以采取 <b>级联操作</b>，即对 <code>Dept</code> 实体类中的 <code>emps</code> 属性这样设置：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@OneToMany</span><span class="org-rainbow-delimiters-depth-1">(</span>mappedBy=<span class="org-string">"dept"</span>, cascade=<span class="org-constant">CascadeType</span>.REMOVE<span class="org-rainbow-delimiters-depth-1">)</span>
+<span class="org-keyword">private</span> <span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">emps</span> = <span class="org-keyword">new</span> <span class="org-type">ArrayList</span><span class="org-rainbow-delimiters-depth-1">&lt;&gt;()</span>;
+</pre>
+</div>
+
+<p>
+那么，再去执行删除操作的时候，部门、连带它所有的员工，都会被删除。一步到位，快速绝伦。
+</p>
+
+<p>
+除了删除操作，级联的类型还有：
+</p>
+<ul class="org-ul">
+<li>CascadeType.PERSIST
+</li>
+<li>CascadeType.MERGE
+</li>
+<li>CascadeType.REFRESH
+</li>
+<li>CascadeType.ALL (快捷方式，代指所有)
+</li>
+</ul>
+
+<p>
+虽然 cascade 会让我们的代码更简介，使用更方便。但是，在工业环境中，<b>不建议使用 cascade 设置</b>。
+</p>
+</div>
+
+<div id="outline-container-sec-6-1" class="outline-3">
+<h3 id="sec-6-1"><span class="section-number-3">6.1</span> 删除数据的方式</h3>
+<div class="outline-text-3" id="text-6-1">
+<p>
+第一种方法：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">&#20248;&#28857;&#65306;&#24555;&#36895;&#31616;&#27905;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#32570;&#28857;&#65306;&#19981;&#33021;&#20851;&#32852;&#21024;&#38500;</span>
+<span class="org-type">Product</span> <span class="org-variable-name">product</span> = <span class="org-keyword">new</span> <span class="org-type">Product</span><span class="org-rainbow-delimiters-depth-1">()</span>;
+product.setId<span class="org-rainbow-delimiters-depth-1">(</span>44L<span class="org-rainbow-delimiters-depth-1">)</span>;
+session.delete<span class="org-rainbow-delimiters-depth-1">(</span>product<span class="org-rainbow-delimiters-depth-1">)</span>;
+</pre>
+</div>
+
+<p>
+第二种方法：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">&#20248;&#28857;&#65292;&#33021;&#20851;&#32852;&#21024;&#38500;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#32570;&#28857;&#65292;&#19981;&#30452;&#25509;</span>
+<span class="org-type">Product</span> <span class="org-variable-name">product</span> = session.load<span class="org-rainbow-delimiters-depth-1">(</span>Product.<span class="org-keyword">class</span>, id<span class="org-rainbow-delimiters-depth-1">)</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">load, not get</span>
+session.delete<span class="org-rainbow-delimiters-depth-1">(</span>product<span class="org-rainbow-delimiters-depth-1">)</span>;
+</pre>
+</div>
+
+<p>
+第三种方法：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">&#20248;&#28857;&#65292;&#26356;&#28789;&#27963;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#32570;&#28857;&#65292;&#36319;&#31532;&#19968;&#31181;&#26041;&#24335;&#19968;&#26679;&#65292;&#19981;&#33021;&#21024;&#38500;&#20851;&#32852;</span>
+<span class="org-type">int</span> <span class="org-variable-name">result</span> = session
+    .createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"delete Product where id = :id"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .setParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"id"</span>, 44L<span class="org-rainbow-delimiters-depth-1">)</span>
+    .executeUpdate<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+</div>
+</div>
+</section>
+
+<section id="outline-container-sec-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> 查询</h2>
+<div class="outline-text-2" id="text-7">
+</div><div id="outline-container-sec-7-1" class="outline-3">
+<h3 id="sec-7-1"><span class="section-number-3">7.1</span> get/load</h3>
+<div class="outline-text-3" id="text-7-1">
+<p>
+根据主键进行查询。这是最基本，最高效的一种查询手段。
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-7-2" class="outline-3">
+<h3 id="sec-7-2"><span class="section-number-3">7.2</span> Query</h3>
+<div class="outline-text-3" id="text-7-2">
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">//// </span><span class="org-comment">&#22522;&#26412;&#35821;&#27861;</span>
+<span class="org-type">String</span> <span class="org-variable-name">hql</span> = <span class="org-string">"from xxx where yyy"</span>;
+<span class="org-type">Query</span> <span class="org-variable-name">query</span> = session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span>hql<span class="org-rainbow-delimiters-depth-1">)</span>;
+query.setParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"aaa"</span>, <span class="org-string">"bbb"</span><span class="org-rainbow-delimiters-depth-1">)</span>;
+query.uniqueResult<span class="org-rainbow-delimiters-depth-1">()</span>;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#21487;&#20197;&#29992;&#38142;&#24335;&#35821;&#27861;&#31616;&#21270;&#35821;&#21477;</span>
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from xxx where yyy"</span><span class="org-rainbow-delimiters-depth-1">)</span>.setParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"aaa"</span>, <span class="org-string">"bbb"</span><span class="org-rainbow-delimiters-depth-1">)</span>.uniqueResult<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">select &#35821;&#21477; &#21644; &#36820;&#22238;&#20540;</span>
+from Emp e <span class="org-type">where</span> e.<span class="org-variable-name">name</span> = <span class="org-string">'x'</span>;           <span class="org-comment-delimiter">// </span><span class="org-comment">&#40664;&#35748;&#19981;&#38656;&#35201;&#20889; select, &#37027;&#20040;&#20250;&#23558;&#32467;&#26524;&#23553;&#35013;&#21040; Emp &#23545;&#35937;&#20013;</span>
+select e from Emp e <span class="org-type">where</span> e.<span class="org-variable-name">name</span> = <span class="org-string">'x'</span>;  <span class="org-comment-delimiter">// </span><span class="org-comment">&#19978;&#38754;&#30340;&#35821;&#21477;&#65292;&#36319;&#27492;&#21477;&#26159;&#19968;&#33268;&#30340;</span>
+select name <span class="org-type">from</span> <span class="org-variable-name">Emp</span>;                    <span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;Object</span>
+<span class="org-type">select</span> <span class="org-variable-name">name</span>, <span class="org-variable-name">salary</span> from Emp;            <span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;Object[]</span>
+select <span class="org-keyword">new</span> <span class="org-type">list</span><span class="org-rainbow-delimiters-depth-1">(</span>name<span class="org-rainbow-delimiters-depth-1">)</span> from Emp;          <span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;ArrayList</span>
+select <span class="org-keyword">new</span> <span class="org-type">map</span><span class="org-rainbow-delimiters-depth-1">(</span>name, salary<span class="org-rainbow-delimiters-depth-1">)</span> from Emp;   <span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;HashMap</span>
+select <span class="org-keyword">new</span> <span class="org-type">map</span><span class="org-rainbow-delimiters-depth-1">(</span>name <span class="org-type">as</span> <span class="org-variable-name">name</span>, salary <span class="org-type">as</span> <span class="org-variable-name">sal</span><span class="org-rainbow-delimiters-depth-1">)</span> from Emp; <span class="org-comment-delimiter">// </span><span class="org-comment">&#23450;&#21046; key &#20540;</span>
+select <span class="org-keyword">new</span> <span class="org-type">Boy</span><span class="org-rainbow-delimiters-depth-1">(</span>name, salary<span class="org-rainbow-delimiters-depth-1">)</span> from Emp;   <span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;Boy &#23545;&#35937;</span>
+
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">&#24471;&#21040;&#36820;&#22238;&#32467;&#26524;</span>
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Book"</span>, Book.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.uniqueResult<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Book"</span>, Book.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Book"</span>, Book.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.iterate<span class="org-rainbow-delimiters-depth-1">()</span>.next<span class="org-rainbow-delimiters-depth-1">()</span>;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#36807;&#28388;&#25805;&#20316;</span>
+session.createFilter<span class="org-rainbow-delimiters-depth-1">(</span>customer.getOrders<span class="org-rainbow-delimiters-depth-2">()</span>, <span class="org-string">"where price &gt; 5000"</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">&#32858;&#21512;&#20989;&#25968;&#21450;&#20854;&#20182;&#36816;&#31639;&#31526;&#30340;&#20351;&#29992;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#36820;&#22238;&#20540;&#65306;Object[]</span>
+<span class="org-type">select</span> <span class="org-function-name">max</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">salary</span><span class="org-rainbow-delimiters-depth-1">)</span>, <span class="org-function-name">avg</span><span class="org-rainbow-delimiters-depth-1">(</span>salary<span class="org-rainbow-delimiters-depth-1">)</span>, <span class="org-function-name">sum</span><span class="org-rainbow-delimiters-depth-1">(</span>salary<span class="org-rainbow-delimiters-depth-1">)</span> from Emp;
+<span class="org-comment-delimiter">// </span><span class="org-comment">group by</span>
+<span class="org-type">select</span> <span class="org-function-name">max</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">salary</span><span class="org-rainbow-delimiters-depth-1">)</span>, <span class="org-function-name">avg</span><span class="org-rainbow-delimiters-depth-1">(</span>salary<span class="org-rainbow-delimiters-depth-1">)</span>, <span class="org-function-name">sum</span><span class="org-rainbow-delimiters-depth-1">(</span>salary<span class="org-rainbow-delimiters-depth-1">)</span> from Emp e group by e.department;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#23558;&#32467;&#26524;&#23553;&#35013;&#21040; map &#20013;</span>
+select <span class="org-keyword">new</span> <span class="org-type">map</span><span class="org-rainbow-delimiters-depth-1">(</span>max<span class="org-rainbow-delimiters-depth-2">(</span>salary<span class="org-rainbow-delimiters-depth-2">)</span> as maxsal, avg<span class="org-rainbow-delimiters-depth-2">(</span>salary<span class="org-rainbow-delimiters-depth-2">)</span> as avgsal, sum<span class="org-rainbow-delimiters-depth-2">(</span>salary<span class="org-rainbow-delimiters-depth-2">)</span> as sumsal<span class="org-rainbow-delimiters-depth-1">)</span> from Emp e group by e.department;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#36816;&#31639;&#31526;&#21644;&#20989;&#25968;</span>
+<span class="org-type">select</span> <span class="org-function-name">sum</span><span class="org-rainbow-delimiters-depth-1">(</span>salary + nvl<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">commission</span>, 0<span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span> as res from Emp;
+
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">join</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">Query &#19981;&#33021;&#20351;&#29992; JOIN &#25235;&#21462;&#31574;&#30053;&#12290;Query &#40664;&#35748;&#20351;&#29992; select &#35821;&#21477;&#36827;&#34892;&#20851;&#32852;&#25968;&#25454;&#30340;&#21152;&#36733;&#12290;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#22914;&#26524;&#24819;&#24378;&#21046;&#20351;&#29992; join &#35821;&#21477;&#65292;&#38656;&#35201;&#36890;&#36807; hql &#35821;&#21477;&#25351;&#23450;&#65306;</span>
+<span class="org-comment-delimiter">/// </span><span class="org-comment">1. &#38544;&#24335;&#35774;&#32622;</span>
+<span class="org-type">from</span> Emp e <span class="org-type">where</span> e.department.<span class="org-variable-name">location</span> = <span class="org-string">'NEW YORK'</span>;
+<span class="org-comment-delimiter">/// </span><span class="org-comment">2. &#26174;&#24335;&#35843;&#29992;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">fetch &#20915;&#23450;&#26368;&#21518;&#32467;&#26524;&#30340;&#24418;&#24335;&#65306;</span>
+<span class="org-comment-delimiter">//   </span><span class="org-comment">- &#26377; fetch: [Emp, Emp, ...]</span>
+<span class="org-comment-delimiter">//   </span><span class="org-comment">- &#26080; fetch: [[Emp, Dept], [Emp, Dept]]</span>
+<span class="org-type">from</span> Emp e join e.dept <span class="org-type">where</span> e.<span class="org-variable-name">name</span> = <span class="org-string">'xxx'</span>;
+<span class="org-type">from</span> Emp e left join e.dept <span class="org-type">where</span> e.<span class="org-variable-name">name</span> = <span class="org-string">'xxx'</span>;
+<span class="org-type">from</span> Emp e left join fetch e.dept <span class="org-type">where</span> e.<span class="org-variable-name">name</span> = <span class="org-string">'xxx'</span>;
+
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">&#20998;&#39029;&#12289;&#24635;&#34892;&#25968;</span>
+<span class="org-type">long</span> <span class="org-variable-name">count</span> = session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select count(*) from Emp"</span>, Long.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.uniqueResult<span class="org-rainbow-delimiters-depth-1">()</span>;
+<span class="org-type">long</span> <span class="org-variable-name">count</span> = session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select count(*) from Emp"</span>, Long.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.iterate<span class="org-rainbow-delimiters-depth-1">()</span>.next<span class="org-rainbow-delimiters-depth-1">()</span>;
+<span class="org-comment-delimiter">// </span><span class="org-comment">oracle: rownum/row_number()</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">sqlserver: top/row_number()</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">mysql/sqlite: limit x offset y</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">hibernate &#36890;&#36807;&#19979;&#38754;&#35821;&#21477;&#23631;&#34109;&#20102;&#24213;&#23618;&#32454;&#33410;:</span>
+<span class="org-comment-delimiter">/// </span><span class="org-comment">&#20174; 80 &#34892;&#24320;&#22987;&#65292;&#21462; 5 &#34892;&#35760;&#24405;</span>
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from xxx"</span><span class="org-rainbow-delimiters-depth-1">)</span>.setFirstResult<span class="org-rainbow-delimiters-depth-1">(</span>80<span class="org-rainbow-delimiters-depth-1">)</span>.setMaxResults<span class="org-rainbow-delimiters-depth-1">(</span>5<span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">delete &amp; update</span>
+delete Emp <span class="org-type">where</span> <span class="org-variable-name">name</span> = :oldName;
+update Emp <span class="org-type">set</span> <span class="org-variable-name">name</span> = :newName where id = :id;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#32423;&#32852;&#25805;&#20316;&#30340;&#35774;&#32622;&#65292;&#23545; Query &#20063;&#26159;&#26080;&#25928;&#30340;&#65292;&#27604;&#22914;&#65292;&#24819;&#21024;&#38500;&#19968;&#20010;&#37096;&#38376;&#65292;&#38656;&#35201;&#20808;&#21024;&#38500;&#21592;&#24037;&#65292;&#20877;&#21024;&#37096;&#38376;&#65306;</span>
+delete Emp e <span class="org-type">where</span> e.department.<span class="org-variable-name">deptno</span> = <span class="org-string">'#DN'</span>;
+delete Dept <span class="org-type">where</span> <span class="org-variable-name">deptno</span> = <span class="org-string">'#DN'</span>;
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-7-3" class="outline-3">
+<h3 id="sec-7-3"><span class="section-number-3">7.3</span> Criteria</h3>
+<div class="outline-text-3" id="text-7-3">
+<p>
+Criteria，标准、规范，它是 Criterion 的复数形式。
+</p>
+
+<p>
+优势: 
+</p>
+<ul class="org-ul">
+<li>面向对象
+</li>
+<li>不用拼接sql，方便扩展
+</li>
+<li>统一性，跨数据库
+</li>
+</ul>
+
+<p>
+<b>Criteria 接口: 表示特定类的一个查询</b>
+</p>
+
+<p>
+<b>Criterion 接口: 表示一个限定条件</b>
+</p>
+
+<p>
+示例：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">Session &#26159; Criteria &#30340;&#24037;&#21378;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">Criterion &#30340;&#20027;&#35201;&#23454;&#29616;&#30001; Example&#12289;Junction &#21644; SimpleExpression</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">Criterion &#19968;&#33324;&#36890;&#36807; Restrictions &#25552;&#20379;&#30340;&#24037;&#21378;&#26041;&#27861;&#33719;&#24471;</span>
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">emps</span> = session.createCriteria<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">&#21019;&#24314;</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Restrictions.like<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"name"</span>, <span class="org-string">"K%"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>        <span class="org-comment-delimiter">// </span><span class="org-comment">&#27169;&#31946;</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Restrictions.gt<span class="org-rainbow-delimiters-depth-2">(</span> <span class="org-string">"salary"</span>, 2000F <span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>     <span class="org-comment-delimiter">// </span><span class="org-comment">&#22823;&#20110;</span>
+    .addOrder<span class="org-rainbow-delimiters-depth-1">(</span> Order.desc<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"salary"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>              <span class="org-comment-delimiter">// </span><span class="org-comment">&#25490;&#24207;-1</span>
+    .addOrder<span class="org-rainbow-delimiters-depth-1">(</span> Order.desc<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"commission"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>          <span class="org-comment-delimiter">// </span><span class="org-comment">&#25490;&#24207;-2</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#32422;&#26463;&#21487;&#20197;&#25353;&#36923;&#36753;&#20998;&#32452;</span>
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">emps</span> = sess.createCriteria<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Restrictions.like<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"name"</span>, <span class="org-string">"K%"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Restrictions.or<span class="org-rainbow-delimiters-depth-2">(</span> Restrictions.ge<span class="org-rainbow-delimiters-depth-3">(</span> <span class="org-string">"salary"</span>, 3000F <span class="org-rainbow-delimiters-depth-3">)</span>,
+                           Restrictions.isNotNull<span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"commission"</span><span class="org-rainbow-delimiters-depth-3">)</span> <span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">Property~Example &#26159;&#28155;&#21152;&#32422;&#26463;&#30340;&#21478;&#20004;&#31181;&#26041;&#27861;</span>
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">emps</span> = session.createCriteria<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span>Property.forName<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"name"</span><span class="org-rainbow-delimiters-depth-2">)</span>.eq<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"KING"</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-comment-delimiter">// </span><span class="org-comment">Property</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span>Example.create<span class="org-rainbow-delimiters-depth-2">(</span>king<span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>    <span class="org-comment-delimiter">// </span><span class="org-comment">&#23558; king &#19978;&#30340;&#25968;&#25454;&#23553;&#35013;&#25104;&#26465;&#20214;</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">&#20851;&#32852;&#26597;&#35810;</span>
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Emp</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">emps</span> = session.createCriteria<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .createCriteria<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"depts"</span><span class="org-rainbow-delimiters-depth-1">)</span>      <span class="org-comment-delimiter">// </span><span class="org-comment">vs. createAlias</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Restrictions.eq<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"location"</span>, <span class="org-string">"NEW YORK"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">//// </span><span class="org-comment">Projections &#25552;&#20379;&#25237;&#24433;&#26597;&#35810;&#65292;&#24182;&#33021;&#20998;&#32452;&#32858;&#21512;</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#25237;&#24433;&#26465;&#20214;</span>
+<span class="org-type">ProjectionList</span> <span class="org-variable-name">projectionList</span> = Projections.projectionList<span class="org-rainbow-delimiters-depth-1">()</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Projections.property<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"dept"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Projections.rowCount<span class="org-rainbow-delimiters-depth-2">()</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Projections.max<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"salary"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Projections.sum<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"salary"</span>, <span class="org-string">"sum"</span> <span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .add<span class="org-rainbow-delimiters-depth-1">(</span> Projections.groupProperty<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"dept"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>;
+<span class="org-comment-delimiter">// </span><span class="org-comment">&#26597;&#35810;&#32467;&#26524;</span>
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Object</span><span class="org-rainbow-delimiters-depth-2">[]</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">rs</span> = session.createCriteria<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .setProjection<span class="org-rainbow-delimiters-depth-1">(</span> projectionList <span class="org-rainbow-delimiters-depth-1">)</span>
+    .addOrder<span class="org-rainbow-delimiters-depth-1">(</span> Order.asc<span class="org-rainbow-delimiters-depth-2">(</span><span class="org-string">"sum"</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-sec-7-4" class="outline-3">
+<h3 id="sec-7-4"><span class="section-number-3">7.4</span> NativeSQL</h3>
+<div class="outline-text-3" id="text-7-4">
+<p>
+基本语法，默认的返回的结果为 Object[]:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java">session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select ename, sal from emp"</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select * from emp"</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select * from emp e, dept d where e.deptno=d.deptno and d.loc=:loc"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .setParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"loc"</span>, <span class="org-string">"NEW YORK"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+
+<p>
+可以通过 <code>addScalar()</code> 设置返回类型，并限定结果:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">&#19979;&#38754;&#30340;&#26597;&#35810;&#65292;&#24471;&#21040;&#30340;&#32467;&#26524;&#20026; Object[], &#21253;&#21547;&#20004;&#20010;&#20803;&#32032;&#65306;0:id / 1:name</span>
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select * from emp where id=9999"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .addScalar<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"empno"</span>, <span class="org-constant">StandardBasicType</span>.INTEGER<span class="org-rainbow-delimiters-depth-1">)</span>
+    .addScalar<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"ename"</span>, <span class="org-constant">StandardBasicType</span>.STRING<span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+
+<p>
+也可以将结果封装到 Entity(实体类) 中:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-comment-delimiter">// </span><span class="org-comment">simplest</span>
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select * from emp where sal &gt; 2000"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .addEntity<span class="org-rainbow-delimiters-depth-1">(</span>Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">with alias</span>
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select e.* from emp e where sal &gt; 2000"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .addEntity<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"e"</span>, Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-comment-delimiter">// </span><span class="org-comment">multiple</span>
+session.createNativeQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select e.*, d.* from emp e join dept d using (deptno) where e.sal &gt; 2000"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .addEntity<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"e"</span>, Emp.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .addEntity<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"d"</span>, Dept.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+
+<p>
+将结果封装到普通对象(非实体类)。注意，必须要使用 <code>addScalar()</code> 设置字段:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Person</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">persons</span> = session.createSQLQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"select * from emp"</span><span class="org-rainbow-delimiters-depth-1">)</span>
+  .addScalar<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"ename"</span>, <span class="org-constant">StandardBasicType</span>.INTEGER<span class="org-rainbow-delimiters-depth-1">)</span>
+  .addScalar<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"salary"</span>, <span class="org-constant">StandardBasicType</span>.FLOAT<span class="org-rainbow-delimiters-depth-1">)</span>
+  .setResultTransformer<span class="org-rainbow-delimiters-depth-1">(</span>Transforms.aliasToBean<span class="org-rainbow-delimiters-depth-2">(</span>Person.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-2">)</span><span class="org-rainbow-delimiters-depth-1">)</span>
+  .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-7-5" class="outline-3">
+<h3 id="sec-7-5"><span class="section-number-3">7.5</span> NameQuery</h3>
+</div>
+</section>
+
+<section id="outline-container-sec-8" class="outline-2">
+<h2 id="sec-8"><span class="section-number-2">8</span> Query Strategy</h2>
+<div class="outline-text-2" id="text-8">
+<p>
+一个实体类对象，里面有各个属性，这些属性的值可能不是在同一张表中。
+</p>
+
+<p>
+为了效率，需要有一定加载策略，主要两个方面：
+</p>
+<ol class="org-ol">
+<li>when，属性数据的加载时机，是否在加载这个实体类的时候就立刻加载。
+</li>
+<li>how，通过什么样的语句加载，select/join/其他。
+</li>
+</ol>
+
+<p>
+比如，有一个实体类，叫 <code>Girl</code>:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Entity</span>
+<span class="org-keyword">public</span> <span class="org-keyword">class</span> <span class="org-type">Girl</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#22522;&#26412;&#25968;&#25454;&#65292;&#20445;&#23384;&#22312; girl &#34920;&#20013;&#30340;&#25968;&#25454;:</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">select id, name from girl;</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#36825;&#31181;&#25968;&#25454;&#30340;&#40664;&#35748;&#21152;&#36733;&#26426;&#21046;&#26159;&#65306;</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">1. when: &#31435;&#21051;&#21152;&#36733;(EAGER)</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">2. how:  SELECT &#35821;&#21477;</span>
+    <span class="org-c-annotation">@Id</span> <span class="org-keyword">private</span> <span class="org-type">long</span> <span class="org-variable-name">id</span>;
+    <span class="org-keyword">private</span> <span class="org-type">String</span> <span class="org-variable-name">name</span>;
+
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#20851;&#32852;&#25968;&#25454;&#65292;&#21333;&#32467;&#26524;&#65292;&#20445;&#23384;&#22312; boy &#34920;&#20013;&#30340;:</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">select * from boy where id='&#25105;&#30340;&#32769;&#29238;&#20146;&#65292;&#24744;&#30340;&#32534;&#21495;';</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#36825;&#31181;&#26041;&#24335;&#30340;&#40664;&#35748;&#21152;&#36733;&#26426;&#21046;&#26159;&#65306;</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">1. when: &#31435;&#21051;&#21152;&#36733;(EAGER)</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">2. how:  LEFT JOIN &#36830;&#25509;</span>
+    <span class="org-c-annotation">@ManyToOne</span>
+    <span class="org-keyword">private</span> <span class="org-type">Boy</span> <span class="org-variable-name">father</span>;
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#20851;&#32852;&#25968;&#25454;&#65292;&#32467;&#26524;&#38598;&#65292;&#20445;&#23384;&#22312; bag &#34920;&#20013;&#30340;</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">select * from bag where big_owner='&#22899;&#23401;&#30340;&#32534;&#21495;';</span>
+    <span class="org-comment-delimiter">// </span><span class="org-comment">&#36825;&#31181;&#23646;&#24615;&#25968;&#25454;&#30340;&#40664;&#35748;&#21152;&#36733;&#26426;&#21046;&#26159;&#65306;</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">1. when: &#24310;&#36831;&#21152;&#36733;(LAZY)</span>
+    <span class="org-comment-delimiter">//   </span><span class="org-comment">2. how:  SELECT &#35821;&#21477;</span>
+    <span class="org-c-annotation">@OneToMany</span><span class="org-rainbow-delimiters-depth-2">(</span>mappedBy = <span class="org-string">"girl"</span><span class="org-rainbow-delimiters-depth-2">)</span>
+    <span class="org-keyword">private</span> <span class="org-type">Set</span><span class="org-rainbow-delimiters-depth-2">&lt;</span><span class="org-type">Bag</span><span class="org-rainbow-delimiters-depth-2">&gt;</span> <span class="org-variable-name">bags</span> = <span class="org-keyword">new</span> <span class="org-type">HashSet</span><span class="org-rainbow-delimiters-depth-2">()</span>;
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+如果我们调用 <code>session.load(Girl.class, 1L)</code>, 会加载编号为 1 的女孩的数据。
+</p>
+
+<p>
+她的数据分为三种：
+</p>
+<ol class="org-ol">
+<li>基本数据，包含在 girl 表中的，比如 <code>id/name</code>。
+</li>
+<li>关联数据/XtoOne，比如 <code>father</code> 属性。
+</li>
+<li>关联数据/XtoMany，比如 <code>bags</code> 属性。
+</li>
+</ol>
+
+<p>
+可以通过 <code>fetch 属性/@Fetch 注解</code> 定制加载策略，分别对应 <code>when/how</code>, 例：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@ManyToOne</span><span class="org-rainbow-delimiters-depth-1">(</span>fetch = <span class="org-constant">FetchType</span>.EAGER<span class="org-rainbow-delimiters-depth-1">)</span><span class="org-comment-delimiter">// </span><span class="org-comment">&#23450;&#20041;&#21152;&#36733;&#30340;&#26102;&#26426;(when)</span>
+<span class="org-c-annotation">@Fetch</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">FetchMode</span>.<span class="org-type">SELECT</span><span class="org-rainbow-delimiters-depth-1">)</span>           <span class="org-comment-delimiter">// </span><span class="org-comment">&#23450;&#20041;&#21152;&#36733;&#35821;&#21477;&#30340;&#26679;&#24335;(how)</span>
+<span class="org-keyword">private</span> <span class="org-type">Boy</span> <span class="org-variable-name">boyfriend</span>;
+</pre>
+</div>
+
+<ul class="org-ul">
+<li>如果 when 为 <code>EAGER</code>，默认的 how 为 <code>FetchMode.JOIN</code>
+</li>
+<li>如果 when 为 <code>EAGER</code>，可以定制使 how 为 <code>FetchMode.SELECT/SUBSELECT</code>
+</li>
+<li>如果 how 为 <code>JOIN</code>, 那么 when 只能是 <code>EAGER</code>
+</li>
+<li>如果设置了 <code>hibernate.default_batch_fetch_size</code> 或在实体类/集合上标注了 <code>@BatchSize</code>, 会对 <code>LAZY</code> 属性加载采取批量优化。
+</li>
+<li><code>@Fetch(FetchMode.SUBSELECT)</code> 可以优化 HQL 返回的列表的关联数据查询语句
+</li>
+<li><b>JOIN 策略对 Query 查询无效</b>，如需关联查询，在语句中显式调用 join 语句!
+</li>
+</ul>
+</div>
+</section>
+
+
+<section id="outline-container-sec-9" class="outline-2">
+<h2 id="sec-9"><span class="section-number-2">9</span> N+1 问题</h2>
+<div class="outline-text-2" id="text-9">
+<p>
+比如，如果：
+</p>
+<pre class="example">
+打印出编号大于10的部门中的所有员工姓名。
+</pre>
+
+<p>
+那么，语句大致如此：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-type">String</span> <span class="org-variable-name">hql</span> = <span class="org-string">"from Dept where depto &gt; :dn"</span>;
+<span class="org-type">List</span><span class="org-rainbow-delimiters-depth-1">&lt;</span><span class="org-type">Dept</span><span class="org-rainbow-delimiters-depth-1">&gt;</span> <span class="org-variable-name">depts</span> = session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span>hql, Dept.<span class="org-keyword">class</span><span class="org-rainbow-delimiters-depth-1">)</span>
+    .setParameter<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"dn"</span>, 10<span class="org-rainbow-delimiters-depth-1">)</span>
+    .list<span class="org-rainbow-delimiters-depth-1">()</span>;
+
+<span class="org-keyword">for</span><span class="org-rainbow-delimiters-depth-1">(</span><span class="org-type">Dept</span> <span class="org-variable-name">dept</span>: depts<span class="org-rainbow-delimiters-depth-1">)</span> <span class="org-rainbow-delimiters-depth-1">{</span>
+    <span class="org-keyword">for</span><span class="org-rainbow-delimiters-depth-2">(</span><span class="org-type">Emp</span> <span class="org-function-name">emp</span> : dept.getEmps<span class="org-rainbow-delimiters-depth-3">()</span><span class="org-rainbow-delimiters-depth-2">)</span> <span class="org-rainbow-delimiters-depth-2">{</span>
+        System.out.printf<span class="org-rainbow-delimiters-depth-3">(</span><span class="org-string">"&#37096;&#38376;: %s, &#22995;&#21517;: %s\n"</span>,
+                          dept.getName<span class="org-rainbow-delimiters-depth-4">()</span>,
+                          emp.getName<span class="org-rainbow-delimiters-depth-4">()</span><span class="org-rainbow-delimiters-depth-3">)</span>;
+    <span class="org-rainbow-delimiters-depth-2">}</span>
+<span class="org-rainbow-delimiters-depth-1">}</span>
+</pre>
+</div>
+
+<p>
+因为 <code>@OneToMany</code> 默认是 <code>Lazy + SELECT</code> 策略，所以，每个部门的员工只有使用的时候才去查询。
+</p>
+
+<p>
+这就导致了上面的语句发送很多条 select 语句(N+1)，严重影响效率。
+</p>
+
+<p>
+<b>这就是 N+1 问题</b>。
+</p>
+
+
+<p>
+解决方案有主要有下面几种：
+</p>
+<ol class="org-ol">
+<li>在 hql 语句中，使用 join 语句进行关联查询。
+</li>
+<li>将 Dept#emps 的策略设置为 <code>SUBSELECT</code> 方式。
+</li>
+<li>采取批量抓取的优化方式(<code>BatchSize</code>)，即在 Dept#emps 上面加上注解: <code>@BatchSize(size=n)</code>。
+</li>
+<li>使用二级缓存。
+</li>
+</ol>
+</div>
+</section>
+<section id="outline-container-sec-10" class="outline-2">
+<h2 id="sec-10"><span class="section-number-2">10</span> 缓存(Cache)</h2>
+<div class="outline-text-2" id="text-10">
+<p>
+缓存分为三种：事务范围；应用范围；集群范围。
+</p>
+
+<p>
+二级缓存是应用范围的缓存机制。适合放入二级缓存的数据：
+</p>
+<ul class="org-ul">
+<li>很少修改，不会修改，或不允许被更改的数据（常量数据）
+</li>
+<li>不是很重要，允许偶尔出错的数据
+</li>
+</ul>
+
+<p>
+而一些重要的数据或者修改频繁的数据，是不适合放到缓存里的。
+</p>
+
+<p>
+<b>配置使用二级缓存过程：</b>
+</p>
+<ol class="org-ol">
+<li>加入 JAR 包支持：
+<pre class="example">
+"org.hibernate:hibernate-ehcache:5.2.11.Final"
+</pre>
+</li>
+<li>配置 /ehcache.xml [可选]
+</li>
+<li>在 hibernate.cfg.xml 中启用:
+<pre class="example">
+&lt;prop key="hibernate.cache.use_second_level_cache"&gt;true&lt;/prop&gt;
+&lt;prop key="hibernate.cache.use_query_cache"&gt;true&lt;/prop&gt;
+&lt;prop key="hibernate.cache.region.factory_class"&gt;org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory&lt;/prop&gt;
+</pre>
+</li>
+<li>配置要被缓存的类或集合
+<div class="org-src-container">
+
+<pre class="src src-java"><span class="org-c-annotation">@Cachable</span>
+<span class="org-c-annotation">@Cache</span><span class="org-rainbow-delimiters-depth-1">(</span>usage = <span class="org-constant">CacheConcurrencyStrategy</span>.NONSTRICT_READ_WRITE<span class="org-rainbow-delimiters-depth-1">)</span>
+</pre>
+</div>
+</li>
+<li>使用示例
+<div class="org-src-container">
+
+<pre class="src src-java">session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Employee where id=7782"</span><span class="org-rainbow-delimiters-depth-1">)</span>.setCacheable<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">true</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Employee where id=7782"</span><span class="org-rainbow-delimiters-depth-1">)</span>.setCacheable<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">true</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-string">"from Employee where id=7782"</span><span class="org-rainbow-delimiters-depth-1">)</span>.setCacheable<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">true</span><span class="org-rainbow-delimiters-depth-1">)</span>.list<span class="org-rainbow-delimiters-depth-1">()</span>;
+</pre>
+</div>
+</li>
+</ol>
+</div>
+</section>
+<section id="outline-container-sec-11" class="outline-2">
+<h2 id="sec-11"><span class="section-number-2">11</span> 锁(Lock)</h2>
+<div class="outline-text-2" id="text-11">
+<p>
+Hibernate 中，设置锁定有下面三种方式：
+</p>
+<div class="org-src-container">
+
+<pre class="src src-java">session.load<span class="org-rainbow-delimiters-depth-1">(</span>Male.<span class="org-keyword">class</span>, 1L, <span class="org-constant">LockMode</span>.WRITE<span class="org-rainbow-delimiters-depth-1">)</span>
+session.lock<span class="org-rainbow-delimiters-depth-1">(</span>m, <span class="org-constant">LockModeType</span>.WRITE<span class="org-rainbow-delimiters-depth-1">)</span>;
+session.createQuery<span class="org-rainbow-delimiters-depth-1">(</span>hql<span class="org-rainbow-delimiters-depth-1">)</span>.setLockMode<span class="org-rainbow-delimiters-depth-1">(</span><span class="org-constant">LockModeType</span>.PESSIMISTIC_WRITE<span class="org-rainbow-delimiters-depth-1">)</span>;
+</pre>
+</div>
+
+<p>
+Hibernate 中锁的类型，分为两种：
+</p>
+<ol class="org-ol">
+<li>悲观锁。使用数据库底层的 <code>for update</code> 语句。数据会被锁定，直到事务结束。
+</li>
+<li>乐观锁。使用实体类中的额外字段( <code>@Version</code> )。它不会真正在数据上加锁，而是用版本号区别记录的不同。
+<div class="org-src-container">
+
+<pre class="src src-sql"><span class="org-comment">-- &#23427;&#20250;&#22312;&#21021;&#27425;&#35835;&#21462;&#25968;&#25454;&#26102;&#23558; version &#19968;&#36215;&#35835;&#20986;&#65292;&#24471;&#21040;&#12304;&#29256;&#26412;&#21495;&#12305;&#65292;&#27604;&#22914; 10</span>
+<span class="org-comment">-- &#31561;&#21040;&#25552;&#20132;&#25968;&#25454;&#30340;&#26102;&#20505;&#65292;&#21457;&#36865;&#19979;&#38754;&#35821;&#21477;&#65306;</span>
+<span class="org-keyword">update</span> xxx <span class="org-keyword">set</span> version = 10 + 1, ... <span class="org-keyword">where</span> id = 2 <span class="org-keyword">and</span> version = 10;
+
+<span class="org-comment">-- &#22914;&#26524;&#25968;&#25454;&#34987;&#21035;&#20154;&#20462;&#25913;&#36807;&#65292;&#37027;&#20040; version &#24050;&#32463;&#19981;&#26159; 10&#65292;&#25152;&#20197;&#19978;&#38754;&#35821;&#21477;&#19981;&#20250;&#26356;&#26032;&#21040;&#20219;&#20309;&#25968;&#25454;&#12290;</span>
+<span class="org-comment">-- &#21516;&#26679;&#65292;hibernate &#20250;&#25243;&#20986;&#19979;&#38754;&#24322;&#24120;&#65306;</span>
+<span class="org-comment">---- javax.persistence.OptimisticLockException: Batch update returned unexpected row count from update [0]; actual row count: 0; expected: 1</span>
+<span class="org-comment">-- &#20174;&#32780;&#38450;&#27490;&#20102;&#25968;&#25454;&#30340;&#20462;&#25913;&#20914;&#31361;&#12290;</span>
+</pre>
+</div>
+</li>
+</ol>
+
+<p>
+悲观锁更适用于修改频率大，读取不多的数据。乐观锁适用于修改非常少，但读取特别多的数据。悲观锁需要耗费更多资源。
+</p>
+</div>
+</section>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: imfine</p>
+<p class="date">Created: 2017-10-16 Mon 16:21</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.2.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation">Go ahead, never stop.</p>
+</div>
+</body>
+</html>

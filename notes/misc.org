@@ -1,0 +1,63 @@
+#+TITLE: MISCELLANEOUS
+
+
+
+* Junit
+| 注解         | 解释                               |
+|--------------+------------------------------------|
+| @Before      | 在每个测试方法运行前执行的方法     |
+| @After       | 在每个测试方法运行后执行的方法     |
+| @BeforeClass | 在类中所有测试运行之前运行的方法   |
+| @AfterClass  | 在类中所有测试运行完毕后运行的方法 |
+| @Test        | 测试方法                           |
+| @Ignore      | 忽略掉本测试方法                   |
+
+
+* 操作系统历史 (Operate System History)
+#+BEGIN_SRC dot :file assets/dot/os_history.svg :exports results
+  digraph os_history {
+      graph [rankdir=LR,ranksep=.25];
+      node [shape=Mrecord,color=lightblue,fontname=SimSun,fontsize=10,style=filled,fillcolor=aliceblue];
+      edge [fontname=SimSun,fontsize=9,color=grey,arrowhead=vee,arrowsize=.5];
+
+      OS -> { Windows[label="Windows\nMicrosoft"]; UNIX };
+      
+      UNIX -> TM [label="拓展/商用",constraint=false];
+      UNIX -> BSD [label="开源版本\n(加州大学伯克利分校)"];
+      UNIX -> Linux[label="山寨版本\n(by Linus Torvalds)"];
+
+      BSD -> { TM, FreeBSD, OpenBSD, NetBSD };
+      TM -> { "AIX(IBM)", "Solaris(Oracle)", "MacOS(Apple)", "HP-UX(HP)" };
+
+      {
+          node [shape=plaintext,style=none];
+          FreeBSD_Desc [label="稳定，高效，精于网络处理"];
+          OpenBSD_Desc [label="号称最安全的操作系统"];
+          NetBSD_Desc  [label="可移植性强，适合嵌入式"];
+      }
+
+      FreeBSD -> FreeBSD_Desc;
+      OpenBSD -> OpenBSD_Desc;
+      NetBSD -> NetBSD_Desc;
+
+      linuxDist [label=" GNU/Linux 发行版 "];
+      
+      Linux -> linuxDist [label="预装大量软件\n增强易用性"];
+      linuxDist -> { Android; Archlinux; }
+      linuxDist -> { node[color=darkgreen]; Debian; Ubuntu; Kali; }
+      linuxDist -> { node[color=steelblue]; Redhat; Fedora; CentOS; };
+      Linux -> GNU [label="推动者"];
+      GNU -> linuxDist [style=dotted];
+      GNU -> { "GNU's Not Unix 的缩写",
+               "由 Richard Stallman\n在麻省理工学院\n人工智能实验室发起,\n目标是成立一个\n完全免费的操作系统",
+               "自由软件组织\n口号是：开源，自由" };
+
+  }
+      
+#+END_SRC
+
+#+RESULTS:
+[[file:assets/dot/os_history.svg]]
+
+
+

@@ -1,0 +1,294 @@
+#+TITLE: 文件上传
+
+
+* 前言
+
+如果要选择一个文件并上传到服务器, 你需要在 =<form>= 中添加 =<input type=“file”>= 字段.
+根据 [[https://www.w3.org/TR/html4/interact/forms.html][HTML规范]], 你需要为 =form= 使用 =POST= 方法进行提交, 并需要将编码方式 =enctype= 设置为 =multipart/form-data=:
+
+#+BEGIN_SRC html
+  <form action="upload" method="post" enctype="multipart/form-data">
+    <input type="text" name="description" placeholder="文件描述" />
+    <input type="file" name="file" />
+    <input type="submit" />
+  </form>
+#+END_SRC
+
+这样的表单提交的时候, 会在请求体(request body)中保存二进制的 =multipart= 数据, 这跟不设置 =enctype= 是完全不同的。
+
+
+PS: =multipart= 编码的数据大致是这个样子的:
+#+BEGIN_HTML
+<pre>
+------WebKitFormBoundaryrGKCBY7qhFd3TrwA
+Content-Disposition: form-data; name="title"
+
+harttle
+------WebKitFormBoundaryrGKCBY7qhFd3TrwA
+Content-Disposition: form-data; name="avatar"; filename="harttle.png"
+Content-Type: image/png
+
+ ... content of harttle.png ...
+------WebKitFormBoundaryrGKCBY7qhFd3TrwA--
+</pre>
+#+END_HTML
+
+* 服务端
+
+在 Servlet 3.0 以前, Servlet API 本身不支持 =multipart/form-data=,
+它只支持表单默认的 =application/x-www-form-urlencoded= 编码.
+当提交 =multipart= 类型数据的时候, 在服务端, 调用 =HttpServletRequest#getParameter()= 会得到 =null= 值.
+特别不方便.
+
+这就是 [[http://commons.apache.org/fileupload][Apache Commons FileUpload]] 出现的原因。
+
+
+*1. 不要手动解析！*
+
+理论上，你可以自己通过 =ServletRequest#getInputStream()= 手动解析数据,
+但这是个细致并且繁琐的任务, 需要你对 HTML 规范有一定了解.
+千万别浪费太多时间在这上面, 不仅没有意义, 而且你的解析可能包含很多错误.
+最好的方式, 是选择一个成熟靠谱的实现.
+
+
+*2. 如果你使用的是 Servlet 3.0 或以后的版本，使用内置的 MultiPart API ！！！*
+
+如果你使用 Servlet 3.0 以上(Tomcat 7.0), 就可以使用标准 API 中提供的 =HttpServletRequest#getPart()= 获取文件数据.
+同时, 可以使用 =getParameter()= 获取同一表单中其他的 *非文件* 字段的值。
+
+
+要接收上传的数据, *总共分两步*:
+
+【首先】 在你的 Servlet 上面标注 =@MultipartConfig=, 使你的 Servlet 有处理 =multipart/form-data= 的能力, 并使 =getPart()= 方法生效:
+
+#+BEGIN_SRC java
+  @WebServlet("/upload")
+  @MultipartConfig
+  public class UploadServlet extends HttpServlet {
+      // ...
+  }
+#+END_SRC
+
+你也可以根据需要为 =@MultipartConfig= 增加参数, 这样可以配置上传的一些细节, 这些参数也可以放到 =web.xml= 中全局使用。
+
+【然后】 你需要实现自己的 =doPost()= 方法:
+#+BEGIN_SRC java
+  protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+      // 获取 <input type="text" name="description"> 的值
+      String description = request.getParameter("description");
+
+      // 获取 <input type="file" name="file"> 的值
+      Part part = request.getPart("file");
+      
+      // 常用属性
+      System.out.printf(
+                        "Part 对象属性方法：\n> Name: %s\n> Size: %d\n> ContentType: %s\n> getSubmittedFileName: %s\n> HeaderNames: %s\n> disposition: %s\n",
+                        part.getName(),
+                        part.getSize(),
+                        part.getContentType(),
+                        part.getSubmittedFileName(),
+                        part.getHeaderNames(),
+                        part.getHeader("content-disposition"));
+
+      // 得到文件名
+      String fileName = part.getSubmittedFileName();
+
+      // 处理文件
+      part.write(你的保存路径);
+      
+      // 其他操作 ...
+  }
+#+END_SRC
+
+如果你在 form 表单中指定了 *multiple*: =<input type=file multiple />=, 表示允许一次上传多个文件,
+那么, 在服务端, 你可以使用 =HttpServletRequest#getParts()= 获取所有文件的列表, 然后根据需要逐个处理。
+
+Servlet 3.1 新增了 =Part#getSubmittedFileName()= 方法, 它用来得到文件的原始名字,
+如果是之前的版本, 文件的名字需要从 head 参数里手动获取, 比如:
+
+#+BEGIN_SRC java
+  String fileName = part.getHeader("content-disposition").split("filename=")[1].replace("\"", "");
+#+END_SRC
+
+
+
+
+*3. 如果你使用的是 Servlet 3.0 以前的版本, 请使用 Apache Commons FileUpload !*
+
+这是当前最流行, 也是最成熟的第三方库, 你需要将两个 jar 包放到你的 lib 包下:
+- commons-fileupload.jar
+- commons-io.jar
+
+它的使用也比较简单, 示例如下:
+
+#+BEGIN_SRC java
+  protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+      try {
+          // 初始化 uploader 对象, 需要一个 FileItemFactory 参数, 用来配置对上传文件的限制
+          ServletFileUpload uploader = new ServletFileUpload(new DiskFileItemFactory());
+
+          // 调用 parseRequest 方法, 将 multipart 所有的数据封装到 list 中
+          List<FileItem> items = uploader.parseRequest(request);
+
+          // 循环处理
+          for (FileItem item : items) {
+              if (item.isFormField()) { // 处理普通字段 (input type="text|radio|checkbox|etc", select, 等).
+                  String fieldName = item.getFieldName();
+                  String fieldValue = item.getString();
+                  // ... (其他操作)
+              } else { // 处理文件数据 (input type="file").
+                  String fieldName = item.getFieldName();
+                  String fileName = FilenameUtils.getName(item.getName());
+                  item.write(我的保存路径);
+                  // ... (其他操作)
+              }
+          }
+      } catch (FileUploadException e) {
+          throw new ServletException("解析文件出错.", e);
+      }
+
+      // ...
+  }
+#+END_SRC
+
+就这么简单。
+
+* 客户端
+
+不管在 IE/Firefox 还是 Chrome 浏览器上, 上传按钮的样式都很丑, 所以, 我们需要:
+
+*1. 自定义上传按钮的样式!*
+
+怎么搞呢? 一般的手段是: 通过 css 将上传按钮变透明(opacity), 并放到其他元素上面(position).
+
+在 html5 中，也可以使用 label 配合 input 的 =display:none= 实现：
+#+BEGIN_SRC html
+  <label style="我的样式">
+    选择图片
+    <input type="file" style="display:none" />
+  </label>
+#+END_SRC
+
+
+除了样式要好看, 另外一个重要的用户体验是:
+
+*2. 选择文件后给我一个预览图吧！*:
+
+#+BEGIN_QUOTE
+在图片上传中, 如果选中后, 能够预览图片, 那是极好的啊！  -- by 牛顿
+#+END_QUOTE
+
+可怎么实现呢? 方法很多, 但这样是不行的:
+: $('#preview').attrib('src', $(':file').val())
+
+获取到的 file 字段的值是类似 =C:\FakePath\xxxx= 的形式, 因为浏览器为了安全方面的考虑, 并不会允许 js 能获取到真正的文件路径.
+
+怎么办呢? 使用 html5 的 =URL#createObjectURL()= 是一种选择, 也可以使用 =FileReader= 进行更复杂的处理.
+
+
+*3. 下面是一个样式+预览的示例:*
+
+#+BEGIN_SRC html
+  <body>
+    <!-- 设置样式 -->
+    <style>
+      .filewrapper {
+          padding: 8px 12px;
+          font-size: 1.2em;
+          background: #333;
+          color: goldenrod;
+          border-radius: 5px;
+          cursor: hand;
+      }
+      .filewrapper:hover {
+          background: #000;
+      }
+    </style>
+
+    <!-- 将 input 隐藏，给 label 一个美丽的外观。点击 label 的时候，会激活相对应的 input -->
+    <label class="filewrapper">
+      点击选择图片
+      <input id="b" name="b" style="display:none" type="file" />
+    </label>
+
+    <!-- 选择图片后的预览图 -->
+    <div>
+      <img id="preview" src="" style="width: 200px; height: 200px; margin: 20px auto;">
+    </div>
+
+    <!-- 选择文件后, 在 preview 区域显示图片预览 -->
+    <!-- 使用了 html5 的 FileReader 对象 -->
+    <script>
+      $("#b").change(function (event) {
+          var file = $("#b")[0].files[0];
+          var reader = new FileReader();
+          reader.onload = function (e) {
+              $("#preview").attr("src", this.result);
+          };
+          reader.readAsDataURL(file);
+      });
+    </script>
+  </body>
+#+END_SRC
+
+效果图为:
+
+[[file:assets/image/howdoudo-fileupload/5233708_2017-07-06_00-21-36_2017-07-10_13-40-26.png]]
+
+
+
+*4. 另一个重点, 是实现异步上传:*
+
+话不多说，代码在此:
+#+BEGIN_SRC js
+  // 表单提交，交给 submitForm 函数处理
+  $('form').on('submit', submitForm);
+
+  // 通过 jQuery 进行异步提交
+  function submitForm() {
+      // 使用 html5 的 FormData 封装表单数据
+      let formData = new FormData($('form')[0]);
+
+      $.ajax({
+          url : '/upload',
+          method : 'POST',
+          data : formData,
+          cache : false,
+          processData : false,   // jQuery 啊，你不要修改我上传的数据
+          contentType : false,   // jQuery 啊，你不要私自设置 Content-Type
+          xhr: function () {     // 如果需要进度条的话，可以为 xhr 对象的 upload 绑定 progress 事件；如果不需要进度条，这里可省略
+              let xhr = new window.XMLHttpRequest();
+              xhr.upload.addEventListener("progress", processHandler, false);
+              return xhr;
+          }
+
+      }).done(function(data) {
+          console.log(data);
+          alert(data);
+      });
+      return false;
+  }
+
+  // 进度监听函数，可以自定义进度条变化等效果
+  function processHandler(event) {
+      if (event.lengthComputable) {
+          // 获取进度
+          var percent = parseInt(100 * event.loaded / event.total);
+          // 根据进度更新显示
+          console.log(percent);
+          // 完成之后...
+          if (percent === 100) {}
+      }
+  }
+#+END_SRC
+
+
+*z. 最后, 我们可以选择一些上传插件, 为项目快速增加上传功能.*
+- [[https://github.com/blueimp/jQuery-File-Upload][jQuery-File-Upload]]
+- [[http://www.dropzonejs.com/][Dropzone JS]]
+- 其他
+
+
+
+
+

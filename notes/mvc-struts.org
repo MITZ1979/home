@@ -1,0 +1,108 @@
+#+TITLE: Struts2
+
+
+* 序
+步骤：
+1. 创建 Gradle 项目
+2. 增加 jar 包支持：
+   : org.apache.struts:struts2-core:2.5.11
+3. 配置 web.xml，让struts 拦截并处理所有来自客户端的请求
+   #+BEGIN_SRC xml
+     <filter>
+       <filter-name>abc</filter-name>
+       <filter-class>org.apache.struts2.dispatcher.filter.StrutsPrepareAndExecuteFilter</filter-class>
+     </filter>
+     <filter-mapping>
+       <filter-name>abc</filter-name>
+       <url-pattern>/*</url-pattern>
+     </filter-mapping>   
+   #+END_SRC
+4. classpath 下添加 struts.xml 文件，定义变量，定义包，定义 Action
+   #+BEGIN_SRC xml
+     <?xml version="1.0" encoding="UTF-8"?>
+     <!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.5//EN" "http://struts.apache.org/dtds/struts-2.5.dtd">
+     <struts>
+         <!-- 开启开发模式，这样可以在 jsp 中使用 s:debug 查看变量 -->
+         <constant name="struts.devMode" value="true" />
+         <!--默认的扩展名为 .action，但是我们可以定制它-->
+         <constant name="struts.action.extension" value="html" />
+         
+         <!-- 用 package 来划分各个模块，主要用来方便维护管理 -->
+         <!-- 需要继承默认的 struts-default, 这是 struts 内置定义的一个 package, 里面预先定义了很多东西 -->
+         <package name="default" namespace="/" extends="struts-default">
+             <!--
+               url: /emplist
+               由哪个类 的哪个方法 去处理，
+               如果请求成功，应该由哪个JSP去渲染页面
+                   如果 result 不带 name，默认指的是 success
+                   如果请求中有验证错误，默认返回名字为 input 的 result
+             -->
+             <action name="emplist" class="com.nf.empst.action.EmpAction" method="emplist">
+                 <result>/view/emplist.jsp</result>
+                 <result name="input">/view/emplist.jsp</result>
+             </action>        
+         </package>
+     </struts>
+   #+END_SRC
+5. 实现 =Action#emplist= 方法, 用来响应 =/emplist.action= 的请求
+   #+BEGIN_SRC java
+     // *最好*要继承 ActionSupport，这个类定义了一些常用变量，并且简单实现了一些常用接口
+     // 尤其它为数据验证和国际化提供了一些支持
+     public class EmpAction extends ActionSupport {
+         // 变量定义
+         //   1. 可以用来接收来自请求中的 parameter
+         //   2. 也可以用来保存用来在 JSP 页面渲染的数据
+         private String name;
+         private List<Emp> emps = new ArrayList<>();
+
+         // 本类中所有 action 方法公有的验证方法
+         // 如果在这个环节出错，那么相应 action 方法将不会执行
+         public void validate() {
+             if(name == null || name.isEmpty()) {
+                 addFieldError("name", "姓名出错!");  // 增加错误的方法。错误有 fieldError/actionError 等类型。
+             }
+         }
+
+         // 格式为 validateXXX, 名字为 XXX 的 action 方法的独有验证方法
+         public void validateEmplist() {
+             // 继续增加其他验证
+             // ...
+             if(hasErrors()) {
+                 // 产生了某些验证错误，将不会继续执行 action 方法，而是转到 input 页面
+             }
+         }
+
+         // action 方法，对应 ‘/emplist.action’ 请求
+         public String emplist() {
+             emps = new EmpDAO().getAll();
+             return SUCCESS;
+         }
+     }
+   #+END_SRC
+6. 实现视图层(view)，即实现页面渲染，即 jsp:
+   #+BEGIN_SRC html
+     <head>
+       <!-- 用来提供一些内置的样式 -->
+       <s:head />
+     </head>
+
+     <ul>
+       <!-- 循环迭代显示数据 -->
+       <s:iterator value="emps" var="e" status="s">
+         <li>${s.index} / ${e.name} / ${e.salary}> </li>
+       </s:iterator>
+     </ul>
+
+     <!-- 利用标签快速生成格式化的表单 -->
+     <s:form action="empsave">
+       <s:textfield name="ename" />
+       <s:select name="deptno" list="depts" />
+       <s:submit value="s" />
+     </s:form>
+
+     <footer>
+       <!-- 用来显示可用数据 -->
+       <s:debug />
+     </footer>
+   #+END_SRC
+ 

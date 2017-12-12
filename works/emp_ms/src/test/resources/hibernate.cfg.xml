@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+    <session-factory>
+        <property name="connection.driver_class">oracle.jdbc.driver.OracleDriver</property>
+        <property name="connection.url">jdbc:oracle:thin:@localhost:1521/orcl</property>
+        <property name="connection.username">vip</property>
+        <property name="connection.password">vip</property>
+        <property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
+
+        <!--<property name="hbm2ddl.auto">update</property>-->
+
+        <property name="show_sql">true</property>
+        <property name="format_sql">true</property>
+
+        <!--二级缓存-->
+        <property name="cache.use_second_level_cache">true</property>
+        <property name="cache.use_query_cache">true</property>
+        <property name="cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</property>
+
+
+        <mapping class="com.nf.emp_ms.entity.Employee" />
+        <mapping class="com.nf.emp_ms.entity.Department" />
+        <mapping class="com.nf.emp_ms.entity.Project" />
+        <mapping class="com.nf.emp_ms.entity.Company" />
+
+    </session-factory>
+</hibernate-configuration>

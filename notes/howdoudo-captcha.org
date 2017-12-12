@@ -1,0 +1,193 @@
+#+TITLE: 验证码
+
+
+* 前言
+
+定义：
+#+BEGIN_QUOTE
+*全自动区分计算机和人类的公开图灵测试* 
+
+英语: Completely Automated Public Turing test to tell Computers and Humans Apart
+
+俗称 *验证码*, 缩写为 *Captcha*.
+#+END_QUOTE
+
+首先，需要明白：
+: 验证码是种反人类的存在。但它短时间内不可能退出历史舞台。我们需要尽量优化它，尽量提升用户的体验。
+
+为什么要有验证码呢？
+: 是为了证明网络的那端是一个人而不是一台机器(电脑)。
+
+为什么要区分是人还是机器呢？
+: 原因很多，归根结底，在于做坏事上，机器的效率比人高、成本比人低！
+
+_示例，臭名昭著的百度，极其恶心的验证码：_
+
+#+DOWNLOADED: file:D%3A/loofee/desktop/2017-7-10.png @ 2017-07-10 23:33:04
+[[file:assets/image/howdoudo-captcha/2017-7-10_2017-07-10_23-33-04.png]]
+
+ 
+下面是验证码的几种常用场景：
+1. 账号安全。比如登录窗口，如果不设置验证码，可以使用脚本进行暴力破解。
+2. 防作弊。比如，12306 的验证码是为了防止机器恶意刷票。
+3. 反垃圾消息。比如，某些论坛上的验证码，防止机器群发的垃圾广告广告。
+
+#+DOWNLOADED: http://img2.imgtn.bdimg.com/it/u=3255307341,801612317&fm=26&gp=0.jpg @ 2017-07-10 22:27:35
+[[file:assets/image/howdoudo-captcha/2017-07-10_22-27-351.jpg]]
+
+下面是几种常见可视化验证码的形式：
+1. 歪曲的字
+2. 倒立，点击
+3. 问答题
+4. 滑动拼图验证码
+5. 其他各种五花八门
+
+#+DOWNLOADED: http://img1.imgtn.bdimg.com/it/u=428668557,2296109554&fm=26&gp=0.jpg @ 2017-07-10 22:28:25
+[[file:assets/image/howdoudo-captcha/2017-07-10_22-28-241.jpg]]
+
+
+
+他们有一个共同点，机器不容易辨认，可人类很容易就能识别。
+
+
+/现在，验证码技术也在不断发展。尤其是基于大数据的智能判断方兴未艾，按下不表。/
+
+* 验证码的原理
+一个完整的验证逻辑分两步：
+
+1. 第一次请求 （获取阶段）
+   - 服务器生成一个可以比较的对象，比如字符串或数字，并将其保存起来。一般保存到 Session 中。
+   - 服务器根据上述生成的对象，构造出机器难以辨识的一段数据，比如声音、图片或短信，并发送给用户。
+   - 数据在客户端展示，用户可以去识别。
+
+2. 第二次请求, 携带用户输入的验证信息 （校验阶段）
+   - 用户将自己的数据，连带辨识出来的验证码数据，一并请求到服务器
+   - 服务器将之前保存的原始数据，跟用户提交的作比较。如果相同，那么通过，否则不通过。
+
+* 图片验证码
+这是一种 *最基本的验证方式*, 其他所有的验证思路都是跟它一致的。
+
+Java 中，绘制图片，需要用到 =awt= 包的 =BufferedImage= 类。
+
+在获取阶段，客户端代码描述为：
+#+BEGIN_SRC html
+  <img src="/captcha" title="验证码" />
+  <input name="captcha" />
+#+END_SRC
+
+服务端的代码描述为：
+#+BEGIN_SRC java
+  @WebServlet("/captcha")
+  class CaptchaServlet {
+      public 获得验证码的方法 () {
+          // 1. 获取随机字符串，作为原始验证字符串
+          String randomString = getRandomString(4);
+
+          // 2. 根据字符串，生成机器难以辨认的图片
+          BufferedImage image = 绘制图片(randomString);
+
+          // 3. 原始字符串 -> 保存起来
+          session.setAttribute("captcha", randomString);
+
+          // 4. 绘制的图片 -> 发送给用户
+          ImageIO.write(image, "PNG", response.getOutputStream());
+      }
+
+
+      /* 根据字符串绘制图片 */
+      BufferedImage 绘制图片(String randomString) {
+          // 1. 创建 Image 对象
+          BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+          // 2. 获取画笔
+          Graphics g = image.getGraphics();
+
+          // 3. 设置背景色
+          g.setColor(getRandomColor());
+          g.fillRect(0, 0, w, h);
+
+          // 4. 绘制字符串
+          g.setColor(getRandomColor());
+          g.setFont(new Font(xxx, xxx, xxx));
+          g.drawString();
+          // 其他一些处理，变形扭曲等
+
+          // 5. 画干扰线和干扰点等
+          g.setColor(getRandomColor());
+          g.drawLine();
+          g.drawOval();
+
+          // 6. 结束
+          g.dispose();
+
+          return image;
+      }
+  }
+#+END_SRC
+
+
+* 短信验证码
+除了上述直接发送给用户浏览器的可视化验证码之外，在注册等场合，我们经常用到短信或邮箱验证。
+
+这主要是为了防止账号被随意注册，从而进行恶意行为（僵尸粉，刷单等），也是奸商获取我们私人信息的重要途径（其实是为了提供更优服务哦~）。
+
+有时候也是为了代替密码，绑定手机用来确保登录的安全性。
+
+#+BEGIN_QUOTE
+小朋友，将你的所有秘密都告诉我，我会给你糖吃~     by 麻云
+#+END_QUOTE
+
+不管是图片验证码，还是短信、邮箱验证，道理都是一样的，区别在于发送给用户去辨认的数据不同、数据展示方式不同或数据接收媒介不同。
+
+#+DOWNLOADED: file:D%3A/loofee/desktop/zhihu.png @ 2017-07-10 23:42:24
+[[file:assets/image/howdoudo-captcha/zhihu_2017-07-10_23-42-24.png]]
+
+
+=短信验证= 也是分为 *验证码获取* 和 *校验* 两个阶段！ *获取验证码* 这一步通常通过 Ajax 实现，并在服务端调用短信接口发送数据，数据不再通过浏览器展现，而是通过手机等其他媒介传递。
+
+*短信验证的简单代码描述为：*
+#+BEGIN_SRC java
+  // 1. 从 request 中得到用户的手机号码
+  String phone = request.getParameter("phone");
+
+  // 2. 得到随机的字符串或数字
+  String randomNumber = getRandomNumber(4);
+
+  // 3. 将得到的原始字符串保存起来
+  session.setAttribute("captcha", randomNumber);
+
+  // 4. 调用短信接口服务，将原始字符串发送给用户
+  SMSInteface.sendMessage(phone, randomNumber);
+#+END_SRC
+
+至于短信接口服务，有很多。比如[[https://www.alidayu.com][阿里大鱼]], 它的使用很简单：
+#+BEGIN_SRC java
+  // 1. 注册账号，获取 appkey 和 secret
+  // 2. 申请短信签名，申请短信模板
+  // 3. 为项目添加 jar 包: "com.aliyun:aliyun-java-sdk-dysmsapi:+"
+  // 4. 编写程序，发送短信
+  public void sendMessage(String phone, String randomNumber) {
+      // 1. 构造 request 对象
+      AlibabaAliqinFcSmsNumSendRequest req = new AlibabaAliqinFcSmsNumSendRequest();
+      req.setRecNum(phone);        // 发给谁
+      req.setSmsType("normal");    // 短息类型 
+      req.setSmsFreeSignName("南方IT学院134班");  // 你的签名
+      req.setSmsTemplateCode("SMS_585014");                          // 模板，需要自己在后台设置
+      req.setSmsParamString("{,\"body\":\"" + randomNumber + "\"}"); // 发送内容，以参数形式传递给模板
+
+      // 2. 发送短信，生成 response 对象
+      TaobaoClient client = new DefaultTaobaoClient("http://gw.api.taobao.com/router/rest", appkey, secret);
+      AlibabaAliqinFcSmsNumSendResponse resp = client.execute(req);
+      System.out.println(resp.getBody());
+  }
+#+END_SRC
+
+就这么简单。
+
+* 邮箱验证码
+
+邮箱验证，需要用到 J2EE 的 Java Mail 标准。
+
+国外的网站，基本都是使用邮箱注册。它很基础很重要。
+
+但道理相通，时间有限，在此略过不提。
